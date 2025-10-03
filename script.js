@@ -289,7 +289,7 @@ document.getElementById("downloadBtn").addEventListener("click", downloadImage);
 
 //SHARING TO WHATSAPP
 const share = document.getElementById("copyBtn");
-const link = "https://web.whatsapp.com/send?text=";
+const link = "https://wa.me/?text=";
 
 share.addEventListener("click", ()=>{
   const text = encodeURIComponent("hi there, I just created a cool WhatsApp status using this awesome Status Maker app! Check it out:https://jhaystatsnap.vercel.app");
