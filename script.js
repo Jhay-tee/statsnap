@@ -292,7 +292,7 @@ const share = document.getElementById("copyBtn");
 const link = "https://web.whatsapp.com/send?text=";
 
 share.addEventListener("click", ()=>{
-  const text = encodeURIComponent("hi there, I just created a cool WhatsApp status using this awesome Status Maker app! Check it out: https://statustextmaker.example.com ");
+  const text = encodeURIComponent("hi there, I just created a cool WhatsApp status using this awesome Status Maker app! Check it out:https://jhaystatsnap.vercel.app");
   const url = link + text;
   window.open(url, "_blank");
 });

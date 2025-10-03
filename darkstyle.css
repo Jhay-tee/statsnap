@@ -107,7 +107,7 @@ nav{
   font-weight: 700;
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: #0a0a0a;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(21, 101, 192, 0.5);
   text-align: center;
@@ -382,7 +382,7 @@ main {
   font-weight: 700;
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: #070707;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(21, 101, 192, 0.5);
   text-align: center;
