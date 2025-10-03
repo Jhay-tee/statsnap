@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Status Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link id="theme" rel="stylesheet" href="lightstyle.css"> 
+    <script src="script.js" defer></script>
+    <link href="https://fonts.googleapis.com/css?family=Arial:400,700|Courier+New:400,700|Georgia:400,700|Times+New+Roman:400,700|Trebuchet+MS:400,700|Verdana:400,700|Lucida+Console:400,700|Palatino+Linotype:400,700|Comic+Sans+MS:400,700|Impact:400,700|Open+Sans:400,700|Lato:400,700|Roboto:400,700|Montserrat:400,700|Oswald:400,700|Raleway:400,700|Merriweather:400,700|Ubuntu:400,700|PT+Sans:400,700|Noto+Sans:400,700|Fira+Sans:400,700|Dancing+Script:400,700|Pacifico:400,700|Indie+Flower:400,700|Great+Vibes:400,700|Cinzel:400,700|Bebas+Neue:400,700|Playfair+Display:400,700|Arvo:400,700|Quicksand:400,700|Cabin:400,700|Josefin+Sans:400,700|Varela+Round:400,700|Karla:400,700|Rubik:400,700|Mukta:400,700|Hind:400,700|Satisfy:400,700|Poppins:400,700|Cairo:400,700|Aldrich:400,700|Anton:400,700|Bangers:400,700|Bowlby+One+SC:400,700|Candal:400,700|Chivo:400,700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+   <nav>
+        <img id="logo" src="lightthemeicon.png" alt="App Logo" class="logo">
+        <button id="darkModeToggle">🌙</button>
+        <select  id="screenratio">
+          <option value = "1080x1920">9:16 (Whatsapp /IG story)</option>
+          <option value = "1080x1080">1:1   (IG)</option>
+          <option value = "1080x1350">4:5   (facebook post)</option>
+          <option value = "1920x1080">16:9   (Youtube video)</option>
+          </select>
+        <select  id="fontSelect">
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="'Courier New', Courier, monospace">Courier New</option>
+          <option value="'Georgia', serif">Georgia</option>
+          <option value="'Times New Roman', Times, serif">Times New Roman</option>
+          <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+          <option value="'Verdana', sans-serif">Verdana</option>
+          <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
+          <option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino Linotype</option>
+          <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans MS</option>
+          <option value="'Impact', Charcoal, sans-serif">Impact</option>
+          <option value="'Open Sans', sans-serif">Open Sans</option>
+          <option value="'Lato', sans-serif">Lato</option>
+          <option value="'Roboto', sans-serif">Roboto</option>
+            <option value="'Montserrat', sans-serif">Montserrat</option>
+            <option value="'Oswald', sans-serif">Oswald</option>
+            <option value="'Raleway', sans-serif">Raleway</option>
+            <option value="'Merriweather', serif">Merriweather</option>
+            <option value="'Ubuntu', sans-serif">Ubuntu</option>
+            <option value="'PT Sans', sans-serif">PT Sans</option>
+            <option value="'Noto Sans', sans-serif">Noto Sans</option>
+            <option value="'Fira Sans', sans-serif">Fira Sans</option>
+            <option value="'Dancing Script', cursive">Dancing Script</option>
+            <option value="'Pacifico', cursive">Pacifico</option>
+            <option value="'Indie Flower', cursive">Indie Flower</option>
+            <option value="'Great Vibes', cursive">Great Vibes</option>
+            <option value="'Cinzel', serif">Cinzel</option>
+            <option value="'Bebas Neue', cursive">Bebas Neue</option>
+            <option value="'Playfair Display', serif">Playfair Display</option>
+            <option value="'Arvo', serif">Arvo</option>
+            <option value="'Quicksand', sans-serif">Quicksand</option>
+            <option value="'Cabin', sans-serif">Cabin</option>
+            <option value="'Josefin Sans', sans-serif">Josefin Sans</option>
+            <option value="'Varela Round', sans-serif">Varela Round</option>
+            <option value="'Karla', sans-serif">Karla</option>
+            <option value="'Rubik', sans-serif">Rubik</option>
+            <option value="'Mukta', sans-serif">Mukta</option>
+            <option value="'Hind', sans-serif">Hind</option>
+            <option value="'Satisfy', cursive">Satisfy</option>
+            <option value = "poppins, sans-serif">Poppins</option>
+            <option value = "cairo, sans-serif">Cairo</option>
+            <option value = "aldrich, sans-serif">Aldrich</option>
+            <option value = "anton, sans-serif">Anton</option>
+            <option value = "bangers, cursive">Bangers</option>
+            <option value = "bowlby one sc, cursive">Bowlby One SC</option>
+            <option value = "candal, sans-serif">Candal</option>
+            <option value = "chivo, sans-serif">Chivo</option>
+          </select>
+
+      </nav>
+    <main>
+        <div class="centered">
+        <section class="status-box" aria-label="Status creation area" id="statusBox">
+            <article 
+                class="editable-text" 
+                contenteditable="true" 
+                spellcheck="false" 
+                role="textarea"
+                aria-label="Editable status text"></article>
+        </section>
+        </div>
+        <section id="buttnz">
+        <button id="importBtn" onclick="getImage()">Import images from web</button>
+        <div id="button-container">
+        <select  id="gradientSelect">
+          <option value="none">No Gradient</option>
+          <option value="to right">left and right</option>
+          <option value="to left">right and left</option>
+          <option value="to bottom">top and bottom</option>
+          <option value="to top">bottom and top</option>
+          <option value="to bottom right">top left to bottom right</option>
+          <option value="to bottom left">top right to bottom left</option>
+          <option value="to top right">bottom left to top right</option>
+          <option value="to top left">bottom right to top left</option>
+          <option value="radial">radial</option>
+
+          </select>
+          <div id="bgcol">
+          <label for="bkgcol" class="upload" id="bckgcolz">set background color</label>
+          <input type="color" id="bkgcol" style="display: none;"></div>
+          <div id="txt">
+          <label for="txtcol" class="upload" id="txtcolz">select text color</label><br>
+          <input type="color" id="txtcol" style="display: none;"></div>
+          <label for="backimg" class="upload" >set background image</label>
+          <input type="file" id="backimg" style="display: none;" accept="image/*">
+          </div>
+          <button id="downloadBtn">Download Status</button>
+          <button id="copyBtn">share on Whatsapp</button>
+          </section>
+    </main>
+</body>
+</html>
