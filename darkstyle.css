@@ -212,7 +212,7 @@ main {
   font-size: clamp(0.875rem, 2vw, 1rem);
   font-weight: 700;
   border: none;
-  color: #fff;
+  color: #0f0e0e;
   cursor: pointer;
   box-shadow: 0 4px 8px rgba(21, 101, 192, 0.5);
   text-align: center;
@@ -286,7 +286,7 @@ main {
   appearance: none;
   -webkit-appearance: none;
   background-image: none;
-  color: #fff;
+  color: #201f1f;
 }
 
 /* container for all controls */
