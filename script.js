@@ -275,6 +275,7 @@ function downloadImage() {
   container.style.width = targetW + 'px';
   container.style.height = targetH + 'px';
   container.style.overflow = 'hidden';
+  container.style.imageRendering = "crisp-edges";
 
   // Clone statusBox
   const clone = statusBox.cloneNode(true);
@@ -284,7 +285,8 @@ function downloadImage() {
   clone.style.minHeight = targetH + 'px';
   clone.style.maxWidth = targetW + 'px';
   clone.style.maxHeight = targetH + 'px';
-  clone.style.backgroundSize = 'cover';
+  clone.style.backgroundSize = 'cover'; 
+  clone.style.imageRendering = "crisp-edges";
   clone.style.backgroundPosition = 'center';
   //clone.style.backgroundColor = "none";
   clone.style.backgroundRepeat = 'no-repeat';
@@ -309,7 +311,7 @@ function downloadImage() {
     cloneText.style.wordWrap = 'break-word';
    // cloneText.style.backgroundColor = 'none';
     cloneText.style.padding = (20 * scaleFactor) + 'px';
-  //  cloneText.style.filter = 'brightness(1.2)'; // Make text slightly brighter
+    cloneText.style.filter = 'brightness(1.2)'; // Make text slightly brighter
   //  clone.style.opacity = '0.1'; // Further ensure rendering
   }
 
