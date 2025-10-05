@@ -169,7 +169,7 @@ main {
   animation: fadeIn 0.8s ease-out;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 2px solid rgba(33, 150, 243, 0.2);
-  filter: brightness(1.09);
+  filter: brightness(1.17);
 }
 
 .status-box:hover {
@@ -213,7 +213,7 @@ main {
   text-align: center;
   outline: none;
   word-wrap: break-word;
-  filter: brightness(0.59);
+  filter: brightness(1.2);
 }
 
 .editable-text:empty::before {
