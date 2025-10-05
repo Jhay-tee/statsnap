@@ -153,7 +153,7 @@ main {
   max-height: 500px;
 
   /* Removed default gradient that darkened exports */
-  //background-color: transparent;
+  /*background-color: transparent;*/
   background-image: none;
 
   border-radius: 20px;
@@ -165,11 +165,11 @@ main {
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
- // image-rendering: crisp-edges;
+  image-rendering: crisp-edges;
   animation: fadeIn 0.8s ease-out;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 2px solid rgba(33, 150, 243, 0.2);
-  //filter: brightness(1.17);
+  /*filter: brightness(1.17);*/
 }
 
 .status-box:hover {
