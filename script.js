@@ -144,7 +144,7 @@ function getImage(){
       statusBox.style.backgroundSize = 'cover';
       statusBox.style.backgroundPosition = 'center';
       statusBox.style.backgroundRepeat = 'no-repeat';
-      statusBox.style.backgroundColor = 'transparent';
+     // statusBox.style.backgroundColor = 'transparent';
       localStorage.setItem('bgImageData', dataUrl);
       localStorage.removeItem('bgImageUrl');
     } catch (e) {
@@ -152,7 +152,7 @@ function getImage(){
       statusBox.style.backgroundSize = 'cover';
       statusBox.style.backgroundPosition = 'center';
       statusBox.style.backgroundRepeat = 'no-repeat';
-      statusBox.style.backgroundColor = 'none';
+      //statusBox.style.backgroundColor = 'none';
     }
   };
   img.src = url;
@@ -286,12 +286,12 @@ function downloadImage() {
   clone.style.maxHeight = targetH + 'px';
   clone.style.backgroundSize = 'cover';
   clone.style.backgroundPosition = 'center';
-  clone.style.backgroundColor = "none";
+  //clone.style.backgroundColor = "none";
   clone.style.backgroundRepeat = 'no-repeat';
   clone.style.margin = '0';
   clone.style.padding = '0';
   clone.style.boxSizing = 'border-box';
-  clone.style.opacity = '0.1';  //Ensure rendering
+//  clone.style.opacity = '0.1';  //Ensure rendering
   clone.style.filter = 'brightness(1.19) contrast(1.1)'; // Make image brighter
 
   // Scale text properly
@@ -307,10 +307,10 @@ function downloadImage() {
     cloneText.style.width = '100%';
     cloneText.style.textAlign = 'center';
     cloneText.style.wordWrap = 'break-word';
-    cloneText.style.backgroundColor = 'none';
+   // cloneText.style.backgroundColor = 'none';
     cloneText.style.padding = (20 * scaleFactor) + 'px';
-    cloneText.style.filter = 'brightness(1.2)'; // Make text slightly brighter
-    clone.style.opacity = '0.1'; // Further ensure rendering
+  //  cloneText.style.filter = 'brightness(1.2)'; // Make text slightly brighter
+  //  clone.style.opacity = '0.1'; // Further ensure rendering
   }
 
   container.appendChild(clone);
