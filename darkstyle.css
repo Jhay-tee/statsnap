@@ -173,7 +173,7 @@ main {
   animation: fadeIn 0.8s ease-out;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 2px solid rgba(21, 101, 192, 0.4);
-  filter: brightness(1.09);
+  filter: brightness(1.17);
 }
 
 .status-box:hover {
@@ -191,7 +191,7 @@ main {
   outline: none;
   word-wrap: break-word;
   position: relative;
-  filter: brightness(0.56);
+  filter: brightness(1.2);
 }
 
 /* placeholder for contenteditable (dark) */
