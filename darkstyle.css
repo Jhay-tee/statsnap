@@ -159,7 +159,7 @@ main {
   max-width: 500px;
   max-height: 500px;
   background: linear-gradient(135deg, #000000 0%, #1565c0 100%);
-  background-color : none;
+  background-color : transparent;
   justify-self: center;
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(21, 101, 192, 0.5);
@@ -173,6 +173,7 @@ main {
   animation: fadeIn 0.8s ease-out;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 2px solid rgba(21, 101, 192, 0.4);
+  filter: brightness(0.59)
 }
 
 .status-box:hover {
