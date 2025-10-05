@@ -460,7 +460,6 @@ window.history.replaceState({}, document.title, newUrl);
 
 // PERSIST STATE TO LOCALSTORAGE
 document.addEventListener('DOMContentLoaded', () => {
-  loadSharedStatus()
   try {
     const linkEl = document.getElementById('theme');
     const darkBtn = document.getElementById('darkModeToggle');
@@ -601,6 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
+  loadSharedStatust();
   } catch (err) {
     console.error('State persistence error:', err);
   }
