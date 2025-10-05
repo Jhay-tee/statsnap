@@ -600,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
-  loadSharedStatust();
+  loadSharedStatus();
   } catch (err) {
     console.error('State persistence error:', err);
   }
