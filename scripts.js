@@ -373,13 +373,40 @@ function downloadImage() {
 document.getElementById("downloadBtn").addEventListener("click", downloadImage);
 
 // SHARING TO WHATSAPP
-const share = document.getElementById("copyBtn");
-const link = "https://wa.me/?text=";
-share.addEventListener("click", ()=>{
-  const text = encodeURIComponent("hi there, I just created a cool WhatsApp status using this awesome Status Maker app! Check it out:https://jhaystatsnap.vercel.app");
-  const url = link + text;
-  window.open(url, "_blank");
-});
+function shareStatus() {
+  const share = document.getElementById("copyBtn");
+  const [w, h] = select.value.split("x");
+  
+  // Collect all current settings
+  const statusData = {
+    text: statusText.textContent,
+    textColor: txtcolor.value,
+    bgColor: backgcol.value,
+    fontSize: fontSize.value,
+    fontWeight: fontWeight.value,
+    fontFamily: fontSelect.value,
+    ratio: select.value,
+    gradient: gradientSelect.value,
+    bgImage: localStorage.getItem('bgImageData'), // Include background image if exists
+    width: w,
+    height: h
+  };
+  
+  // Convert to URL-safe base64
+  const encodedData = btoa(JSON.stringify(statusData));
+  const shareUrl = `https://jhaystatsnap.vercel.app/?status=${encodedData}`;
+  
+  const text = encodeURIComponent(`Check out the WhatsApp status I created! ✨
+
+View it here: ${shareUrl}
+
+Create your own at: https://jhaystatsnap.vercel.app`);
+  
+  const whatsappUrl = `https://wa.me/?text=${text}`;
+  window.open(whatsappUrl, "_blank");
+}
+
+share.addEventListener("click", shareStatus);
 
 // PERSIST STATE TO LOCALSTORAGE
 document.addEventListener('DOMContentLoaded', () => {
