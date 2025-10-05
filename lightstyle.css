@@ -169,7 +169,7 @@ main {
   animation: fadeIn 0.8s ease-out;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border: 2px solid rgba(33, 150, 243, 0.2);
-  filter: brightness(1.05);
+  filter: brightness(1.09);
 }
 
 .status-box:hover {
