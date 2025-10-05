@@ -386,7 +386,6 @@ function shareStatus() {
     fontFamily: fontSelect.value,
     ratio: select.value,
     gradient: gradientSelect.value,
-    bgImage: localStorage.getItem('bgImageData'), // Include background image if exists
     width: w,
     height: h
   };
@@ -406,9 +405,58 @@ Create your own at: https://jhaystatsnap.vercel.app`);
 }
 
   document.getElementById("copyBtn").addEventListener("click", shareStatus);
+// FUNCTION TO LOAD SHARED STATUS WITH RANDOM BACKGROUND
+function loadSharedStatus() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const statusParam = urlParams.get('status');
+  
+  if (statusParam) {
+    try {
+      // URL decode first, then base64 decode
+      const decodedParam = decodeURIComponent(statusParam);
+      const statusData = JSON.parse(atob(decodedParam));
+      
+      // Apply all the settings
+      statusText.textContent = statusData.text;
+      txtcolor.value = statusData.textColor;
+      backgcol.value = statusData.bgColor;
+      fontSize.value = statusData.fontSize;
+      fontWeight.value = statusData.fontWeight;
+      fontSelect.value = statusData.fontFamily;
+      select.value = statusData.ratio;
+      gradientSelect.value = statusData.gradient;
+      
+      // Update all displays
+      setcolor();
+      backgcolz();
+      updateFontSize();
+      updateFontWeight();
+      applyGradient();
+      
+      // Trigger ratio change to resize
+      select.dispatchEvent(new Event('change'));
+      
+      // GENERATE RANDOM BACKGROUND IMAGE INSTEAD OF ORIGINAL
+      setTimeout(() => {
+        getImage(); // This will generate a new random background image
+      }, 1000);
+      
+      console.log('Shared status loaded successfully with new background!');
+      
+      // Show success message
+      setTimeout(() => {
+        alert('✨ Shared status loaded! A new background image has been generated for you.');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error loading shared status:', error);
+    }
+  }
+}
 
 // PERSIST STATE TO LOCALSTORAGE
 document.addEventListener('DOMContentLoaded', () => {
+  loadSharedStatus()
   try {
     const linkEl = document.getElementById('theme');
     const darkBtn = document.getElementById('darkModeToggle');
