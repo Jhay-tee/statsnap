@@ -292,7 +292,7 @@ function downloadImage() {
   clone.style.padding = '0';
   clone.style.boxSizing = 'border-box';
 //  clone.style.opacity = '0.1';  //Ensure rendering
-  clone.style.filter = 'brightness(1.19) contrast(1.1)'; // Make image brighter
+ // clone.style.filter = 'brightness(1.19) contrast(1.1)'; // Make image brighter
 
   // Scale text properly
   const originalWidth = statusBox.offsetWidth;
@@ -338,7 +338,7 @@ function downloadImage() {
         element.style.height = targetH + 'px';
         element.style.backgroundSize = 'cover';
         element.style.backgroundPosition = 'center';
-        element.style.filter = 'brightness(1.15) contrast(1.1)';
+       // element.style.filter = 'brightness(1.15) contrast(1.1)';
       }
     }).then(canvas => {
       updateDownloadProgress(90, 'Preparing download...');
