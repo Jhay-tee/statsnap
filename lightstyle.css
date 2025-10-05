@@ -153,7 +153,7 @@ main {
   max-height: 500px;
 
   /* Removed default gradient that darkened exports */
-  background-color: transparent;
+  background-color: none;
   background-image: none;
 
   border-radius: 20px;
