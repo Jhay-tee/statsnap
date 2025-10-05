@@ -213,7 +213,7 @@ main {
   text-align: center;
   outline: none;
   word-wrap: break-word;
-  filter: brightness(1.2);
+  /* filter: brightness(2.0) contrast(2.0) saturate(1.1); */
 }
 
 .editable-text:empty::before {

@@ -76,9 +76,8 @@ txtcolor.addEventListener("input",setcolor);
 function backgcolz(){
   statusBox.style.backgroundColor = backgcol.value;
   document.getElementById("bckgcolz").style.backgroundColor = backgcol.value;
-  localStorage.setItem('bkgcol', backgcol.value);
 }
-backgcol.addEventListener("input",backgcolz);
+backgcol.addEventListener('input',backgcolz);
 
 // BACKGROUND IMAGE
 function backgImg(){
@@ -116,8 +115,13 @@ function applyGradient() {
 }
 gradientSelect.addEventListener("change", applyGradient);
 backgcol.addEventListener("input", applyGradient);
-txtcolor.addEventListener("input", applyGradient);
-applyGradient();
+txtcolor.addEventListener("input", function() {
+  setcolor(); // This only updates text color
+  const currentBackground = window.getComputedStyle(statusBox).backgroundImage;
+  if (currentBackground === 'none' || !currentBackground.includes('url')) {
+    applyGradient(); // Only runs if NO background image
+  }
+});
 
 // IMPORTING IMAGES
 function getImage(){
@@ -244,7 +248,7 @@ function showNoInternetPopup() {
   document.body.appendChild(popup);
 }
 
-// ✅ IMPROVED STATUS IMAGE DOWNLOAD FUNCTION - BRIGHTER IMAGES
+// ✅ DOM-TO-IMAGE DOWNLOAD FUNCTION - ORIGINAL BRIGHTNESS & SHARPNESS
 function downloadImage() {
   // Check internet connection for web images
   const computedStyle = window.getComputedStyle(statusBox);
@@ -268,17 +272,7 @@ function downloadImage() {
   const progressPopup = showDownloadProgressPopup();
   updateDownloadProgress(10, 'Initializing download...');
 
-  // Container for offscreen rendering
-  const container = document.createElement('div');
-  container.style.position = 'fixed';
-  container.style.left = '-9999px';
-  container.style.top = '0';
-  container.style.width = targetW + 'px';
-  container.style.height = targetH + 'px';
-  container.style.overflow = 'hidden';
-  container.style.imageRendering = "crisp-edges";
-
-  // Clone statusBox
+  // Create high-quality clone
   const clone = statusBox.cloneNode(true);
   clone.style.width = targetW + 'px';
   clone.style.height = targetH + 'px';
@@ -286,16 +280,17 @@ function downloadImage() {
   clone.style.minHeight = targetH + 'px';
   clone.style.maxWidth = targetW + 'px';
   clone.style.maxHeight = targetH + 'px';
-  clone.style.backgroundSize = 'cover'; 
-  clone.style.imageRendering = "crisp-edges";
+  clone.style.backgroundSize = 'cover';
   clone.style.backgroundPosition = 'center';
-  //clone.style.backgroundColor = "none";
   clone.style.backgroundRepeat = 'no-repeat';
   clone.style.margin = '0';
   clone.style.padding = '0';
   clone.style.boxSizing = 'border-box';
-//  clone.style.opacity = '0.1';  //Ensure rendering
- // clone.style.filter = 'brightness(1.19) contrast(1.1)'; // Make image brighter
+  clone.style.position = 'absolute';
+  clone.style.left = '0';
+  clone.style.top = '0';
+  clone.style.filter = 'brightness(1.5) contrast(1.52) saturate(1.38)';
+  clone.style.imageRendering = 'crisp-edges';
 
   // Scale text properly
   const originalWidth = statusBox.offsetWidth;
@@ -310,110 +305,81 @@ function downloadImage() {
     cloneText.style.width = '100%';
     cloneText.style.textAlign = 'center';
     cloneText.style.wordWrap = 'break-word';
-   // cloneText.style.backgroundColor = 'none';
     cloneText.style.padding = (20 * scaleFactor) + 'px';
-    cloneText.style.filter = 'brightness(1.2) contrast(1.9) saturate(1.4)';
-  cloneText.style.fontWeight = Math.min(Number(currentFontWeight) + 100, 900); // Make bolder
-}
+    cloneText.style.filter = "brightness(1.09) contrast(1.05) saturate(1.05)";
+  }
 
-
+  // Create temporary container
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.width = targetW + 'px';
+  container.style.height = targetH + 'px';
+  container.style.overflow = 'hidden';
   container.appendChild(clone);
   document.body.appendChild(container);
 
-  updateDownloadProgress(30, 'Rendering image...');
+  updateDownloadProgress(40, 'Rendering image...');
 
-  // Add a small delay to ensure everything is properly rendered
+  // Use dom-to-image for crisp, bright images
   setTimeout(() => {
-    updateDownloadProgress(60, 'Finalizing image quality...');
+    updateDownloadProgress(70, 'Finalizing quality...');
     
-    // Render container (not just clone) with better quality settings
-    html2canvas(container, {
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: null,
+    domtoimage.toJpeg(clone, {
       width: targetW,
       height: targetH,
-      scale: 4,
-      logging: false,
-      // Enhanced settings for brighter images
-      onclone: function(clonedDoc, element) {
-        // Ensure all styles are properly applied in the clone
-        element.style.width = targetW + 'px';
-        element.style.height = targetH + 'px';
-        element.style.backgroundSize = 'cover';
-        element.style.backgroundPosition = 'center';
-       // element.style.filter = 'brightness(1.15) contrast(1.1)';
+      quality: 0.96,
+      bgcolor: window.getComputedStyle(statusBox).backgroundColor,
+      style: {
+        'transform': 'none',
+        'width': targetW + 'px',
+        'height': targetH + 'px',
+        'margin': '0',
+        'padding': '0',
+        "filter": "brightness(1.3) contrast(1.25) saturate(1.3)"
+      },
+      filter: function(node) {
+        // Preserve all elements, no filtering
+        return true;
       }
-    }).then(canvas => {
-      updateDownloadProgress(90, 'Preparing download...');
+    }).then(function(dataUrl) {
+      document.body.removeChild(container);
       
-      // Small delay to ensure progress is visible
-      setTimeout(() => {
-        document.body.removeChild(container);
-        
-        const link = document.createElement('a');
-        link.download = `whatsapp-status-${targetW}x${targetH}-${Date.now()}.jpeg`;
-        link.href = canvas.toDataURL('image/jpeg', 1.0); // Maximum quality
-        link.click();
+      const link = document.createElement('a');
+      link.download = `whatsapp-status-${targetW}x${targetH}-${Date.now()}.jpeg`;
+      link.href = dataUrl;
+      link.click();
 
-        updateDownloadProgress(100, 'Download complete!');
-        
-        // Hide popup after a short delay
-        setTimeout(() => {
-          hideDownloadProgressPopup();
-          downloadBtn.textContent = originalText;
-          downloadBtn.disabled = false;
-        }, 1000);
-        
-      }, 500);
+      updateDownloadProgress(100, 'Download complete!');
       
-    }).catch(err => {
+      setTimeout(() => {
+        hideDownloadProgressPopup();
+        downloadBtn.textContent = originalText;
+        downloadBtn.disabled = false;
+      }, 1000);
+      
+    }).catch(function(error) {
       document.body.removeChild(container);
       hideDownloadProgressPopup();
-      console.error('Error generating image:', err);
-      alert('Failed to download image. Please try again.');
+      console.error('dom-to-image error:', error);
+      alert('Failed to generate image. Please try again.');
       downloadBtn.textContent = originalText;
       downloadBtn.disabled = false;
     });
-  }, 500);
+  }, 300);
 }
 
 document.getElementById("downloadBtn").addEventListener("click", downloadImage);
 
-// SHARE EXACT STATUS
-function shareStatus() {
-  const [w, h] = select.value.split("x");
-  
-  // Collect all current settings
-  const statusData = {
-    text: statusText.textContent,
-    textColor: txtcolor.value,
-    bgColor: backgcol.value,
-    fontSize: fontSize.value,
-    fontWeight: fontWeight.value,
-    fontFamily: fontSelect.value,
-    ratio: select.value,
-    gradient: gradientSelect.value,
-    bgImage: localStorage.getItem('bgImageData'), // Include background image if exists
-    width: w,
-    height: h
-  };
-  
-  // Convert to URL-safe base64
-  const encodedData = btoa(JSON.stringify(statusData));
-  const shareUrl = `https://jhaystatsnap.vercel.app/?status=${encodedData}`;
-  
-  const text = encodeURIComponent(`Check out the WhatsApp status I created! ✨
-
-View it here: ${shareUrl}
-
-Create your own at: https://jhaystatsnap.vercel.app`);
-  
-  const whatsappUrl = `https://wa.me/?text=${text}`;
-  window.open(whatsappUrl, "_blank");
-}
-
-share.addEventListener("click", shareStatus);
+// SHARING TO WHATSAPP
+const share = document.getElementById("copyBtn");
+const link = "https://wa.me/?text=";
+share.addEventListener("click", ()=>{
+  const text = encodeURIComponent("hi there, I just created a cool WhatsApp status using this awesome Status Maker app! Check it out:https://jhaystatsnap.vercel.app");
+  const url = link + text;
+  window.open(url, "_blank");
+});
 
 // PERSIST STATE TO LOCALSTORAGE
 document.addEventListener('DOMContentLoaded', () => {
@@ -485,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const bgData = localStorage.getItem('bgImageData');
-    if (bgData && !savedBkg) {
+    if (bgData) {
       statusBox.style.backgroundImage = `url("${bgData}")`;
       statusBox.style.backgroundSize = 'cover';
       statusBox.style.backgroundPosition = 'center';
@@ -557,7 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
-   
   } catch (err) {
     console.error('State persistence error:', err);
   }
