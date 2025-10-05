@@ -291,7 +291,7 @@ function downloadImage() {
   clone.style.margin = '0';
   clone.style.padding = '0';
   clone.style.boxSizing = 'border-box';
-  clone.style.opacity = '0.1'; // Ensure rendering
+  /*clone.style.opacity = '0.1';  Ensure rendering*/
   clone.style.filter = 'brightness(1.19) contrast(1.1)'; // Make image brighter
 
   // Scale text properly
@@ -309,8 +309,8 @@ function downloadImage() {
     cloneText.style.wordWrap = 'break-word';
     cloneText.style.backgroundColor = 'none';
     cloneText.style.padding = (20 * scaleFactor) + 'px';
-    cloneText.style.filter = 'brightness(1.09)'; // Make text slightly brighter
-    clone.style.opacity = '0.1'; // Further ensure rendering
+    cloneText.style.filter = 'brightness(1.2)'; // Make text slightly brighter
+    /*clone.style.opacity = '0.1';  Further ensure rendering*/
   }
 
   container.appendChild(clone);
