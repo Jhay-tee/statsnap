@@ -181,12 +181,12 @@ function showDownloadProgressPopup() {
   popup.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.2)';
   
   popup.innerHTML = `
-    <h3 style="margin-bottom: 20px; color: #25D366;">🔄 Generating Your Status</h3>
+    <h3 style="margin-bottom: 20px; color: #25D366;">Stay chill 😌 🔄 Generating Your Status</h3>
     <div style="margin-bottom: 20px;">
       <div style="width: 100%; background-color: #333; border-radius: 10px; overflow: hidden;">
         <div id="progressBar" style="height: 8px; background-color: #25D366; width: 0%; transition: width 0.3s;"></div>
       </div>
-      <p id="progressText" style="margin-top: 10px; font-size: 14px;">Preparing image...</p>
+      <p id="progressText" style="margin-top: 10px; font-size: 14px;">Preparing image...Do the calms 🙃</p>
     </div>
     <button id="hidePopupBtn" style="background: #666; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 12px;">
       Hide (download will continue)
@@ -197,7 +197,7 @@ function showDownloadProgressPopup() {
   
   // Add hide functionality
   document.getElementById('hidePopupBtn').addEventListener('click', function() {
-    popup.style.display = 'none';
+    popup.style.display = 'none'; 
   });
   
   return popup;
@@ -351,7 +351,7 @@ function downloadImage() {
       link.href = dataUrl;
       link.click();
 
-      updateDownloadProgress(100, 'Download complete!');
+      updateDownloadProgress(100, 'Image rendered, download will begin now');
       
       setTimeout(() => {
         hideDownloadProgressPopup();
@@ -440,12 +440,16 @@ function loadSharedStatus() {
       setTimeout(() => {
         getImage(); // This will generate a new random background image
       }, 1000);
+
+      // CLEAR THE URL PARAMETERS SO RELOAD WON'T REPEAT
+const newUrl = window.location.origin + window.location.pathname;
+window.history.replaceState({}, document.title, newUrl);
       
       console.log('Shared status loaded successfully with new background!');
       
       // Show success message
       setTimeout(() => {
-        alert('✨ Shared status loaded! A new background image has been generated for you.');
+        alert('✨ Shared status loaded! A new background image has been generated for you reloading will refresh and saved progress will be lost ⚠️⚠️');
       }, 1500);
       
     } catch (error) {
