@@ -374,7 +374,6 @@ document.getElementById("downloadBtn").addEventListener("click", downloadImage);
 
 // SHARING TO WHATSAPP
 function shareStatus() {
-  const share = document.getElementById("copyBtn");
   const [w, h] = select.value.split("x");
   
   // Collect all current settings
@@ -406,7 +405,7 @@ Create your own at: https://jhaystatsnap.vercel.app`);
   window.open(whatsappUrl, "_blank");
 }
 
-share.addEventListener("click", shareStatus);
+  document.getElementById("copyBtn").addEventListener("click", shareStatus);
 
 // PERSIST STATE TO LOCALSTORAGE
 document.addEventListener('DOMContentLoaded', () => {
