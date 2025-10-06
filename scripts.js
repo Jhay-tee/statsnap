@@ -372,59 +372,53 @@ function downloadImage() {
 
 document.getElementById("downloadBtn").addEventListener("click", downloadImage);
 
-// SHARING TO WHATSAPP
+// ULTRA SHORT SHARE FUNCTION
 function shareStatus() {
-  const [w, h] = select.value.split("x");
+  // Create compact pipe-separated string
+  const compactData = [
+    statusText.textContent,
+    txtcolor.value.replace('#', ''),
+    backgcol.value.replace('#', ''),
+    fontSize.value,
+    fontWeight.value,
+    fontSelect.value,
+    select.value,
+    gradientSelect.value
+  ].join('|');
   
-  // Collect all current settings
-  const statusData = {
-    text: statusText.textContent,
-    textColor: txtcolor.value,
-    bgColor: backgcol.value,
-    fontSize: fontSize.value,
-    fontWeight: fontWeight.value,
-    fontFamily: fontSelect.value,
-    ratio: select.value,
-    gradient: gradientSelect.value,
-    width: w,
-    height: h
-  };
+  const encodedData = btoa(compactData);
+  const urlSafeData = encodeURIComponent(encodedData);
+  const shareUrl = `https://jhaystatsnap.vercel.app/?s=${urlSafeData}`;
   
-  // Convert to URL-safe base64
-  const encodedData = btoa(JSON.stringify(statusData));
-  const shareUrl = `https://jhaystatsnap.vercel.app/?status=${encodedData}`;
+  console.log('Share URL length:', shareUrl.length);
   
-  const text = encodeURIComponent(`Check out the WhatsApp status I created! ✨
-
-View it here: ${shareUrl}
-
-Create your own at: https://jhaystatsnap.vercel.app`);
-  
+  const text = encodeURIComponent(`Check out my status! ${shareUrl}`);
   const whatsappUrl = `https://wa.me/?text=${text}`;
   window.open(whatsappUrl, "_blank");
 }
 
-  document.getElementById("copyBtn").addEventListener("click", shareStatus);
-// FUNCTION TO LOAD SHARED STATUS WITH RANDOM BACKGROUND
+// Update the load function for the shortened version
 function loadSharedStatus() {
   const urlParams = new URLSearchParams(window.location.search);
-  const statusParam = urlParams.get('status');
+  const statusParam = urlParams.get('s'); // Changed to 's'
   
   if (statusParam) {
     try {
-      // URL decode first, then base64 decode
       const decodedParam = decodeURIComponent(statusParam);
-      const statusData = JSON.parse(atob(decodedParam));
+      const compactData = atob(decodedParam);
       
-      // Apply all the settings
-      statusText.textContent = statusData.text;
-      txtcolor.value = statusData.textColor;
-      backgcol.value = statusData.bgColor;
-      fontSize.value = statusData.fontSize;
-      fontWeight.value = statusData.fontWeight;
-      fontSelect.value = statusData.fontFamily;
-      select.value = statusData.ratio;
-      gradientSelect.value = statusData.gradient;
+      // Split the pipe-separated data back into individual values
+      const dataParts = compactData.split('|');
+      
+      // Map the parts back to their respective properties
+      statusText.textContent = dataParts[0];                    // text
+      txtcolor.value = '#' + dataParts[1];                      // textColor
+      backgcol.value = '#' + dataParts[2];                      // bgColor
+      fontSize.value = dataParts[3];                            // fontSize
+      fontWeight.value = dataParts[4];                          // fontWeight
+      fontSelect.value = dataParts[5];                          // fontFamily
+      select.value = dataParts[6];                              // ratio
+      gradientSelect.value = dataParts[7];                      // gradient
       
       // Update all displays
       setcolor();
@@ -436,20 +430,20 @@ function loadSharedStatus() {
       // Trigger ratio change to resize
       select.dispatchEvent(new Event('change'));
       
-      // GENERATE RANDOM BACKGROUND IMAGE INSTEAD OF ORIGINAL
+      // GENERATE RANDOM BACKGROUND IMAGE
       setTimeout(() => {
-        getImage(); // This will generate a new random background image
+        getImage();
       }, 1000);
 
-      // CLEAR THE URL PARAMETERS SO RELOAD WON'T REPEAT
-const newUrl = window.location.origin + window.location.pathname;
-window.history.replaceState({}, document.title, newUrl);
+      // CLEAR THE URL PARAMETERS
+      const newUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
       
-      console.log('Shared status loaded successfully with new background!');
+      console.log('Shared status loaded successfully!');
       
       // Show success message
       setTimeout(() => {
-        alert('✨ Shared status loaded! A new background image has been generated for you reloading will refresh and saved progress will be lost ⚠️⚠️');
+        alert('✨ Shared status loaded! A new background image has been generated.');
       }, 1500);
       
     } catch (error) {
@@ -457,6 +451,9 @@ window.history.replaceState({}, document.title, newUrl);
     }
   }
 }
+
+// Update your share button event listener
+document.getElementById("copyBtn").addEventListener("click", shareStatus);
 
 // PERSIST STATE TO LOCALSTORAGE
 document.addEventListener('DOMContentLoaded', () => {
