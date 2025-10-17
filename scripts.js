@@ -317,6 +317,8 @@ function downloadImage() {
   container.style.width = targetW + 'px';
   container.style.height = targetH + 'px';
   container.style.overflow = 'hidden';
+  container.style.border = "none";
+  container.style.boxShadow = "none";
   container.appendChild(clone);
   document.body.appendChild(container);
 
@@ -392,7 +394,7 @@ function shareStatus() {
   
   console.log('Share URL length:', shareUrl.length);
   
-  const text = encodeURIComponent(`Check out my status! ${shareUrl}`);
+  const text = encodeURIComponent(`Check out my status! ${shareUrl} you can make yours with http://jhaystasnap`);
   const whatsappUrl = `https://wa.me/?text=${text}`;
   window.open(whatsappUrl, "_blank");
 }
