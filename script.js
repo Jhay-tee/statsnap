@@ -4,8 +4,6 @@ const CONFIG = {
     DEFAULT_RATIO: '1080x1920',
     QUALITY: 0.96,
     DEBOUNCE_DELAY: 300,
-    // ENHANCE_FILTER: 'brightness(1.3) contrast(1.25) saturate(1.3)',
-    // TEXT_ENHANCE_FILTER: 'brightness(1.08) contrast(1.1) saturate(1.05)',
     MAX_DIMENSION: 10000
 };
 
@@ -79,10 +77,13 @@ const StatusManager = {
                 }
             },
             screenratio: (val) => {
-                if (select) {
-                    select.value = val;
-                    select.dispatchEvent(new Event('change'));
-                }
+            if (select) {
+                select.value = val;
+                // ADD THESE LINES to actually apply the ratio:
+                let [w, h] = val.split("x");
+                statusBox.style.width = (w/4) + "px";
+                statusBox.style.height = (h/4) + "px";
+            }
             },
             fontSelect: (val) => {
                 const fontSelect = document.getElementById("fontSelect");
@@ -398,6 +399,7 @@ function backgcolz() {
     if (!statusBox || !backgcol) return;
     
     statusBox.style.backgroundColor = backgcol.value;
+    statusBox.style.backgroundImage = "none";
     const bckgcolz = document.getElementById("bckgcolz");
     if (bckgcolz) {
         bckgcolz.style.backgroundColor = backgcol.value;
@@ -452,7 +454,7 @@ function applyGradient() {
     }
 }
 
-// SHARED CLONE CREATION FUNCTION
+// FIXED CLONE CREATION FUNCTION - CONSISTENT BETWEEN DOWNLOAD AND SHARE
 function createHighQualityClone() {
     const [wStr, hStr] = (select.value || CONFIG.DEFAULT_RATIO).split("x");
     const targetW = parseInt(wStr, 10);
@@ -462,47 +464,84 @@ function createHighQualityClone() {
         throw new Error('Invalid dimensions selected');
     }
 
-    // Create high-quality clone
+    // Create clone
     const clone = statusBox.cloneNode(true);
-    clone.style.width = targetW + 'px';
-    clone.style.height = targetH + 'px';
-    clone.style.minWidth = targetW + 'px';
-    clone.style.minHeight = targetH + 'px';
-    clone.style.maxWidth = targetW + 'px';
-    clone.style.maxHeight = targetH + 'px';
-    clone.style.backgroundSize = 'cover';
-    clone.style.backgroundPosition = 'center';
-    clone.style.backgroundRepeat = 'no-repeat';
-    clone.style.margin = '0';
-    clone.style.padding = '0';
-    clone.style.boxSizing = 'border-box';
-    clone.style.position = 'absolute';
-    clone.style.left = '0';
-    clone.style.top = '0';
-    //clone.style.filter = 'brightness(1.9) contrast(1.52) saturate(1.0)';
-    clone.style.imageRendering = 'crisp-edges';
+    
+    // Get original dimensions and calculate proper scale factor
+    const originalWidth = statusBox.offsetWidth;
+    const originalHeight = statusBox.offsetHeight;
+    const scaleFactor = targetW / originalWidth;
+
+    // Get computed styles from original
+    const originalStyles = window.getComputedStyle(statusBox);
+
+    // Apply scaled container styles - NO FILTERS
+    clone.style.cssText = `
+        width: ${targetW}px;
+        height: ${targetH}px;
+        min-width: ${targetW}px;
+        min-height: ${targetH}px;
+        max-width: ${targetW}px;
+        max-height: ${targetH}px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        background-image: ${originalStyles.backgroundImage};
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-color: ${originalStyles.backgroundColor};
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        image-rendering: crisp-edges;
+        filter: none !important;
+        -webkit-filter: none !important;
+    `;
 
     // Scale text properly
-    const originalWidth = statusBox.offsetWidth;
-    const scaleFactor = targetW / originalWidth;
     const cloneText = clone.querySelector('.editable-text');
     if (cloneText) {
-        const currentFontSize = parseFloat(window.getComputedStyle(statusText).fontSize);
-        const currentFontWeight = window.getComputedStyle(statusText).fontWeight;
+        const textStyles = window.getComputedStyle(statusText);
         
-        cloneText.style.fontSize = (currentFontSize * scaleFactor) + 'px';
-        cloneText.style.fontWeight = currentFontWeight;
-        cloneText.style.width = '100%';
-        cloneText.style.textAlign = 'center';
-        cloneText.style.wordWrap = 'break-word';
-        cloneText.style.padding = (20 * scaleFactor) + 'px';
-        //cloneText.style.filter = CONFIG.TEXT_ENHANCE_FILTER;
+        // Scale all text properties proportionally - NO FILTERS
+        cloneText.style.cssText = `
+            font-size: ${parseFloat(textStyles.fontSize) * scaleFactor}px;
+            font-weight: ${textStyles.fontWeight};
+            line-height: ${parseFloat(textStyles.lineHeight) * scaleFactor}px;
+            text-align: center;
+            color: ${textStyles.color};
+            font-family: ${textStyles.fontFamily};
+            width: 100%;
+            padding: ${20 * scaleFactor}px;
+            margin: 0;
+            box-sizing: border-box;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+            position: relative;
+            transform: none;
+            left: auto;
+            top: auto;
+            right: auto;
+            bottom: auto;
+            filter: none !important;
+            -webkit-filter: none !important;
+        `;
+
+        cloneText.innerHTML = statusText.innerHTML;
     }
 
     return { clone, targetW, targetH };
 }
 
-// Image Import Functionality
+// Image Import Functionality 
 function getImage() {
     // Check internet connection first
     if (!navigator.onLine) {
@@ -645,100 +684,208 @@ function showNoInternetPopup() {
     document.body.appendChild(popup);
 }
 
-// Download Functionality
-function downloadImage() {
-    // Check internet connection for web images
-    const computedStyle = window.getComputedStyle(statusBox);
-    if (computedStyle.backgroundImage.includes('url("http') && !navigator.onLine) {
-        showNoInternetPopup();
-        return;
-    }
-
-    const downloadBtn = document.getElementById('downloadBtn');
-    if (!downloadBtn) return;
-    
-    setLoadingState(downloadBtn, true);
-
-    try {
-        // Use shared clone creation
-        const { clone, targetW, targetH } = createHighQualityClone();
-
-        // Show progress popup
-        const progressPopup = showDownloadProgressPopup();
-        updateDownloadProgress(10, 'Initializing download...');
-
-        // Create temporary container
-        const container = document.createElement('div');
-        container.style.position = 'fixed';
-        container.style.left = '-9999px';
-        container.style.top = '0';
-        container.style.width = targetW + 'px';
-        container.style.height = targetH + 'px';
-        container.style.overflow = 'hidden';
-        container.style.border = "none";
-        container.style.boxShadow = "none";
-        container.appendChild(clone);
-        document.body.appendChild(container);
-
-        updateDownloadProgress(40, 'Rendering image...');
-
-        // Use dom-to-image for crisp, bright images
-        setTimeout(() => {
-            updateDownloadProgress(70, 'Finalizing quality...');
-            
-            domtoimage.toJpeg(clone, {
-                width: targetW,
-                height: targetH,
-                quality: CONFIG.QUALITY,
-                bgcolor: window.getComputedStyle(statusBox).backgroundColor,
-                style: {
-                    'transform': 'none',
-                    'width': targetW + 'px',
-                    'height': targetH + 'px',
-                    'margin': '0',
-                    'padding': '0',
-                    //"filter": CONFIG.ENHANCE_FILTER
-                },
-                filter: function(node) {
-                    // Preserve all elements, no filtering
-                    return true;
-                }
-            }).then(function(dataUrl) {
-                if (container.parentNode) {
-                    document.body.removeChild(container);
-                }
-                
-                const link = document.createElement('a');
-                link.download = `whatsapp-status-${targetW}x${targetH}-${Date.now()}.jpeg`;
-                link.href = dataUrl;
-                link.click();
-
-                updateDownloadProgress(100, 'Image rendered, download will begin now');
-                
-                setTimeout(() => {
-                    hideDownloadProgressPopup();
-                    setLoadingState(downloadBtn, false);
-                }, 1000);
-                
-            }).catch(function(error) {
-                if (container.parentNode) {
-                    document.body.removeChild(container);
-                }
-                hideDownloadProgressPopup();
-                console.error('dom-to-image error:', error);
-                alert('Failed to generate image. Please try again.');
-                setLoadingState(downloadBtn, false);
-            });
-        }, 300);
-
-    } catch (error) {
-        console.error('Download failed:', error);
-        alert('Failed to create image. Please try again.');
-        setLoadingState(downloadBtn, false);
-    }
+// Download Functionality - FIXED TO USE CONSISTENT STYLING
+// Download Recommendation Popup Function
+function showDownloadRecommendationPopup() {
+    return new Promise((resolve) => {
+        const popup = document.createElement('div');
+        popup.id = 'downloadRecommendationPopup';
+        popup.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            z-index: 10001;
+            text-align: center;
+            min-width: 350px;
+            max-width: 90vw;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+            font-family: Arial, sans-serif;
+            backdrop-filter: blur(10px);
+        `;
+        
+        popup.innerHTML = `
+            <h3 style="margin-bottom: 20px; color: #25D366;">📱 Recommendation</h3>
+            <div style="margin-bottom: 25px;">
+                <p style="margin-bottom: 15px; font-size: 16px; line-height: 1.5;">
+                    <strong>We recommend sharing instead of downloading!</strong>
+                </p>
+                <p style="margin-bottom: 10px; font-size: 14px; color: #ccc;">
+                    ⚠️ Downloaded images may appear darker depending on device 
+                </p>
+                <p style="margin-bottom: 10px; font-size: 14px; color: #ccc;">
+                    ✅ Shared images maintain original brightness and quality
+                </p>
+            </div>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button id="shareInsteadBtn" style="background: #25D366; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; flex: 1;">
+                    Share Instead
+                </button>
+                <button id="downloadAnywayBtn" style="background: #007bff; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; flex: 1;">
+                    Download Anyway
+                </button>
+            </div>
+            <div style="margin-top: 15px;">
+                <button id="cancelDownloadBtn" style="background: transparent; color: #ccc; border: 1px solid #666; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                    Cancel
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Add event handlers
+        document.getElementById('shareInsteadBtn').addEventListener('click', () => {
+            popup.remove();
+            // Trigger share function instead
+            const shareBtn = document.getElementById("copyBtn");
+            if (shareBtn) {
+                shareBtn.click();
+            }
+            resolve(false);
+        });
+        
+        document.getElementById('downloadAnywayBtn').addEventListener('click', () => {
+            popup.remove();
+            resolve(true); // Proceed with download
+        });
+        
+        document.getElementById('cancelDownloadBtn').addEventListener('click', () => {
+            popup.remove();
+            resolve(false); // Cancel download
+        });
+        
+        // Close on escape key
+        const closeOnEscape = (e) => {
+            if (e.key === 'Escape') {
+                popup.remove();
+                document.removeEventListener('keydown', closeOnEscape);
+                resolve(false);
+            }
+        };
+        document.addEventListener('keydown', closeOnEscape);
+        
+        // Close on background click
+        popup.addEventListener('click', (e) => {
+            if (e.target === popup) {
+                popup.remove();
+                document.removeEventListener('keydown', closeOnEscape);
+                resolve(false);
+            }
+        });
+    });
 }
 
-// Share Functionality - UPDATED TO USE SHARED CLONE
+// Updated Download Functionality
+function downloadImage() {
+    showDownloadRecommendationPopup().then(proceedWithDownload => {
+        if (!proceedWithDownload) {
+            return; // User chose to share instead or cancel
+        }
+        
+        // Check internet connection for web images
+        const computedStyle = window.getComputedStyle(statusBox);
+        if (computedStyle.backgroundImage.includes('url("http') && !navigator.onLine) {
+            showNoInternetPopup();
+            return;
+        }
+
+        const downloadBtn = document.getElementById('downloadBtn');
+        if (!downloadBtn) return;
+        
+        setLoadingState(downloadBtn, true);
+
+        try {
+            // Use shared clone creation
+            const { clone, targetW, targetH } = createHighQualityClone();
+
+            // Show progress popup
+            const progressPopup = showDownloadProgressPopup();
+            updateDownloadProgress(10, 'Initializing download...');
+
+            // Create temporary container
+            const container = document.createElement('div');
+            container.style.position = 'fixed';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+            container.style.width = targetW + 'px';
+            container.style.height = targetH + 'px';
+            container.style.overflow = 'hidden';
+            container.style.border = "none";
+            container.style.boxShadow = "none";
+            container.style.filter = "none";
+            container.appendChild(clone);
+            document.body.appendChild(container);
+
+            updateDownloadProgress(40, 'Rendering image...');
+
+            // Use dom-to-image with consistent options
+            setTimeout(() => {
+                updateDownloadProgress(70, 'Finalizing quality...');
+                
+                domtoimage.toJpeg(clone, {
+                    width: targetW,
+                    height: targetH,
+                    quality: CONFIG.QUALITY,
+                    bgcolor: window.getComputedStyle(statusBox).backgroundColor,
+                    style: {
+                        'transform': 'none',
+                        'width': targetW + 'px',
+                        'height': targetH + 'px',
+                        'margin': '0',
+                        'padding': '0',
+                        'filter': 'none',
+                        '-webkit-filter': 'none'
+                    },
+                    filter: function(node) {
+                        // Remove all filters from all elements
+                        if (node.style) {
+                            node.style.filter = 'none';
+                            node.style.webkitFilter = 'none';
+                        }
+                        return true;
+                    }
+                }).then(function(dataUrl) {
+                    if (container.parentNode) {
+                        document.body.removeChild(container);
+                    }
+                    
+                    const link = document.createElement('a');
+                    link.download = `whatsapp-status-${targetW}x${targetH}-${Date.now()}.jpeg`;
+                    link.href = dataUrl;
+                    link.click();
+
+                    updateDownloadProgress(100, 'Image rendered, download will begin now');
+                    
+                    setTimeout(() => {
+                        hideDownloadProgressPopup();
+                        setLoadingState(downloadBtn, false);
+                    }, 1000);
+                    
+                }).catch(function(error) {
+                    if (container.parentNode) {
+                        document.body.removeChild(container);
+                    }
+                    hideDownloadProgressPopup();
+                    console.error('dom-to-image error:', error);
+                    alert('Failed to generate image. Please try again.');
+                    setLoadingState(downloadBtn, false);
+                });
+            }, 300);
+
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert('Failed to create image. Please try again.');
+            setLoadingState(downloadBtn, false);
+        }
+    });
+}
+
+// Share Functionality - FIXED TO USE CONSISTENT STYLING
 async function shareStatus() {
     try {
         const shareBtn = document.getElementById("copyBtn");
@@ -747,19 +894,27 @@ async function shareStatus() {
         // Use shared clone creation
         const { clone, targetW, targetH } = createHighQualityClone();
 
-        // Create high-quality image for sharing using the same clone
+        // Create high-quality image for sharing using the SAME options as download
         const dataUrl = await domtoimage.toJpeg(clone, {
             width: targetW,
             height: targetH,
             quality: CONFIG.QUALITY,
-            bgcolor: window.getComputedStyle(statusBox).backgroundColor,
             style: {
                 'transform': 'none',
                 'width': targetW + 'px',
                 'height': targetH + 'px',
                 'margin': '0',
                 'padding': '0',
-                "filter": CONFIG.ENHANCE_FILTER
+                'filter': 'none',
+                '-webkit-filter': 'none'
+            },
+            filter: function(node) {
+                // Remove all filters from all elements
+                if (node.style) {
+                    node.style.filter = 'none';
+                    node.style.webkitFilter = 'none';
+                }
+                return true;
             }
         });
         
