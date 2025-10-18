@@ -294,7 +294,7 @@ main {
   appearance: none;
   -webkit-appearance: none;
   background-image: none;
-  color: #201f1f;
+  color: #e4dbdb;
 }
 
 /* container for all controls */
@@ -345,13 +345,16 @@ main {
 }
 
 /* download / copy buttons distinct color but in dark palette */
+
+
 #downloadBtn {
   margin-top: clamp(2rem, 5vh, 5rem);
-  background: linear-gradient(135deg, #0d47a1 0%, #01579b 100%);
+  background: linear-gradient(135deg, #1976d2 0%, #414346 100%);
   border: 1px solid rgba(13, 71, 161, 0.4);
 }
+
 #copyBtn {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  background: linear-gradient(135deg, #42a5f5 0%, #05f06f 100%);
   border: 1px solid rgba(21, 101, 192, 0.4);
 }
 

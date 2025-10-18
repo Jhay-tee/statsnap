@@ -1,10 +1,11 @@
-  //Configuration constants
+// Configuration constants
 const CONFIG = {
     MAX_IMAGE_SIZE: 5 * 1024 * 1024, // 5MB
     DEFAULT_RATIO: '1080x1920',
     QUALITY: 0.96,
     DEBOUNCE_DELAY: 300,
-    ENHANCE_FILTER: 'brightness(1.3) contrast(1.25) saturate(1.3)',
+    // ENHANCE_FILTER: 'brightness(1.3) contrast(1.25) saturate(1.3)',
+    // TEXT_ENHANCE_FILTER: 'brightness(1.08) contrast(1.1) saturate(1.05)',
     MAX_DIMENSION: 10000
 };
 
@@ -451,6 +452,56 @@ function applyGradient() {
     }
 }
 
+// SHARED CLONE CREATION FUNCTION
+function createHighQualityClone() {
+    const [wStr, hStr] = (select.value || CONFIG.DEFAULT_RATIO).split("x");
+    const targetW = parseInt(wStr, 10);
+    const targetH = parseInt(hStr, 10);
+    
+    if (!StatusManager.validateDimensions(targetW, targetH)) {
+        throw new Error('Invalid dimensions selected');
+    }
+
+    // Create high-quality clone
+    const clone = statusBox.cloneNode(true);
+    clone.style.width = targetW + 'px';
+    clone.style.height = targetH + 'px';
+    clone.style.minWidth = targetW + 'px';
+    clone.style.minHeight = targetH + 'px';
+    clone.style.maxWidth = targetW + 'px';
+    clone.style.maxHeight = targetH + 'px';
+    clone.style.backgroundSize = 'cover';
+    clone.style.backgroundPosition = 'center';
+    clone.style.backgroundRepeat = 'no-repeat';
+    clone.style.margin = '0';
+    clone.style.padding = '0';
+    clone.style.boxSizing = 'border-box';
+    clone.style.position = 'absolute';
+    clone.style.left = '0';
+    clone.style.top = '0';
+    //clone.style.filter = 'brightness(1.9) contrast(1.52) saturate(1.0)';
+    clone.style.imageRendering = 'crisp-edges';
+
+    // Scale text properly
+    const originalWidth = statusBox.offsetWidth;
+    const scaleFactor = targetW / originalWidth;
+    const cloneText = clone.querySelector('.editable-text');
+    if (cloneText) {
+        const currentFontSize = parseFloat(window.getComputedStyle(statusText).fontSize);
+        const currentFontWeight = window.getComputedStyle(statusText).fontWeight;
+        
+        cloneText.style.fontSize = (currentFontSize * scaleFactor) + 'px';
+        cloneText.style.fontWeight = currentFontWeight;
+        cloneText.style.width = '100%';
+        cloneText.style.textAlign = 'center';
+        cloneText.style.wordWrap = 'break-word';
+        cloneText.style.padding = (20 * scaleFactor) + 'px';
+        //cloneText.style.filter = CONFIG.TEXT_ENHANCE_FILTER;
+    }
+
+    return { clone, targetW, targetH };
+}
+
 // Image Import Functionality
 function getImage() {
     // Check internet connection first
@@ -606,143 +657,98 @@ function downloadImage() {
     const downloadBtn = document.getElementById('downloadBtn');
     if (!downloadBtn) return;
     
-    const originalText = downloadBtn.textContent;
-
-    const [wStr, hStr] = (select.value || CONFIG.DEFAULT_RATIO).split("x");
-    const targetW = parseInt(wStr, 10);
-    const targetH = parseInt(hStr, 10);
-    
-    if (!StatusManager.validateDimensions(targetW, targetH)) {
-        alert('Invalid dimensions for download');
-        return;
-    }
-
     setLoadingState(downloadBtn, true);
 
-    // Show progress popup
-    const progressPopup = showDownloadProgressPopup();
-    updateDownloadProgress(10, 'Initializing download...');
+    try {
+        // Use shared clone creation
+        const { clone, targetW, targetH } = createHighQualityClone();
 
-    // Create high-quality clone
-    const clone = statusBox.cloneNode(true);
-    clone.style.width = targetW + 'px';
-    clone.style.height = targetH + 'px';
-    clone.style.minWidth = targetW + 'px';
-    clone.style.minHeight = targetH + 'px';
-    clone.style.maxWidth = targetW + 'px';
-    clone.style.maxHeight = targetH + 'px';
-    clone.style.backgroundSize = 'cover';
-    clone.style.backgroundPosition = 'center';
-    clone.style.backgroundRepeat = 'no-repeat';
-    clone.style.margin = '0';
-    clone.style.padding = '0';
-    clone.style.boxSizing = 'border-box';
-    clone.style.position = 'absolute';
-    clone.style.left = '0';
-    clone.style.top = '0';
-    clone.style.filter = 'brightness(1.5) contrast(1.52) saturate(1.0)';
-    clone.style.imageRendering = 'crisp-edges';
+        // Show progress popup
+        const progressPopup = showDownloadProgressPopup();
+        updateDownloadProgress(10, 'Initializing download...');
 
-    // Scale text properly
-    const originalWidth = statusBox.offsetWidth;
-    const scaleFactor = targetW / originalWidth;
-    const cloneText = clone.querySelector('.editable-text');
-    if (cloneText) {
-        const currentFontSize = parseFloat(window.getComputedStyle(statusText).fontSize);
-        const currentFontWeight = window.getComputedStyle(statusText).fontWeight;
-        
-        cloneText.style.fontSize = (currentFontSize * scaleFactor) + 'px';
-        cloneText.style.fontWeight = currentFontWeight;
-        cloneText.style.width = '100%';
-        cloneText.style.textAlign = 'center';
-        cloneText.style.wordWrap = 'break-word';
-        cloneText.style.padding = (20 * scaleFactor) + 'px';
-        cloneText.style.filter = "brightness(1.09) contrast(1.05) saturate(1.05)";
-    }
+        // Create temporary container
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = targetW + 'px';
+        container.style.height = targetH + 'px';
+        container.style.overflow = 'hidden';
+        container.style.border = "none";
+        container.style.boxShadow = "none";
+        container.appendChild(clone);
+        document.body.appendChild(container);
 
-    // Create temporary container
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.left = '-9999px';
-    container.style.top = '0';
-    container.style.width = targetW + 'px';
-    container.style.height = targetH + 'px';
-    container.style.overflow = 'hidden';
-    container.style.border = "none";
-    container.style.boxShadow = "none";
-    container.appendChild(clone);
-    document.body.appendChild(container);
+        updateDownloadProgress(40, 'Rendering image...');
 
-    updateDownloadProgress(40, 'Rendering image...');
-
-    // Use dom-to-image for crisp, bright images
-    setTimeout(() => {
-        updateDownloadProgress(70, 'Finalizing quality...');
-        
-        domtoimage.toJpeg(clone, {
-            width: targetW,
-            height: targetH,
-            quality: CONFIG.QUALITY,
-            bgcolor: window.getComputedStyle(statusBox).backgroundColor,
-            style: {
-                'transform': 'none',
-                'width': targetW + 'px',
-                'height': targetH + 'px',
-                'margin': '0',
-                'padding': '0',
-                "filter": CONFIG.ENHANCE_FILTER
-            },
-            filter: function(node) {
-                // Preserve all elements, no filtering
-                return true;
-            }
-        }).then(function(dataUrl) {
-            if (container.parentNode) {
-                document.body.removeChild(container);
-            }
+        // Use dom-to-image for crisp, bright images
+        setTimeout(() => {
+            updateDownloadProgress(70, 'Finalizing quality...');
             
-            const link = document.createElement('a');
-            link.download = `whatsapp-status-${targetW}x${targetH}-${Date.now()}.jpeg`;
-            link.href = dataUrl;
-            link.click();
+            domtoimage.toJpeg(clone, {
+                width: targetW,
+                height: targetH,
+                quality: CONFIG.QUALITY,
+                bgcolor: window.getComputedStyle(statusBox).backgroundColor,
+                style: {
+                    'transform': 'none',
+                    'width': targetW + 'px',
+                    'height': targetH + 'px',
+                    'margin': '0',
+                    'padding': '0',
+                    //"filter": CONFIG.ENHANCE_FILTER
+                },
+                filter: function(node) {
+                    // Preserve all elements, no filtering
+                    return true;
+                }
+            }).then(function(dataUrl) {
+                if (container.parentNode) {
+                    document.body.removeChild(container);
+                }
+                
+                const link = document.createElement('a');
+                link.download = `whatsapp-status-${targetW}x${targetH}-${Date.now()}.jpeg`;
+                link.href = dataUrl;
+                link.click();
 
-            updateDownloadProgress(100, 'Image rendered, download will begin now');
-            
-            setTimeout(() => {
+                updateDownloadProgress(100, 'Image rendered, download will begin now');
+                
+                setTimeout(() => {
+                    hideDownloadProgressPopup();
+                    setLoadingState(downloadBtn, false);
+                }, 1000);
+                
+            }).catch(function(error) {
+                if (container.parentNode) {
+                    document.body.removeChild(container);
+                }
                 hideDownloadProgressPopup();
+                console.error('dom-to-image error:', error);
+                alert('Failed to generate image. Please try again.');
                 setLoadingState(downloadBtn, false);
-            }, 1000);
-            
-        }).catch(function(error) {
-            if (container.parentNode) {
-                document.body.removeChild(container);
-            }
-            hideDownloadProgressPopup();
-            console.error('dom-to-image error:', error);
-            alert('Failed to generate image. Please try again.');
-            setLoadingState(downloadBtn, false);
-        });
-    }, 300);
+            });
+        }, 300);
+
+    } catch (error) {
+        console.error('Download failed:', error);
+        alert('Failed to create image. Please try again.');
+        setLoadingState(downloadBtn, false);
+    }
 }
 
-// Share Functionality
-// Share Functionality - CORRECTED VERSION
+// Share Functionality - UPDATED TO USE SHARED CLONE
 async function shareStatus() {
     try {
-        const [wStr, hStr] = (select.value || CONFIG.DEFAULT_RATIO).split("x");
-        const targetW = parseInt(wStr, 10);
-        const targetH = parseInt(hStr, 10);
-        
-        if (!StatusManager.validateDimensions(targetW, targetH)) {
-            alert('Invalid dimensions for sharing');
-            return;
-        }
-
         const shareBtn = document.getElementById("copyBtn");
         setLoadingState(shareBtn, true);
 
-        // Create high-quality image for sharing
-        const dataUrl = await domtoimage.toJpeg(statusBox, {
+        // Use shared clone creation
+        const { clone, targetW, targetH } = createHighQualityClone();
+
+        // Create high-quality image for sharing using the same clone
+        const dataUrl = await domtoimage.toJpeg(clone, {
             width: targetW,
             height: targetH,
             quality: CONFIG.QUALITY,
@@ -1157,6 +1163,7 @@ function showTemporaryMessage(message, parentElement = document.body) {
         }
     }, 3000);
 }
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     StatusManager.init();

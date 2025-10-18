@@ -386,11 +386,11 @@ main {
 
 #downloadBtn {
   margin-top: clamp(2rem, 5vh, 5rem);
-  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  background: linear-gradient(135deg, #1976d2 0%, #414346 100%);
 }
 
 #copyBtn {
-  background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
+  background: linear-gradient(135deg, #42a5f5 0%, #05f06f 100%);
 }
 
 /* ensure inputs (hidden color input) don't break layout when visible */
