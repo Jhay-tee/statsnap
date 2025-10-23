@@ -924,7 +924,14 @@ async function shareStatus() {
         const file = new File([blob], 'whatsapp-status.jpg', { type: 'image/jpeg' });
         
         // Enhanced platform detection and sharing
+        //await handleSharing(file, dataUrl, blob);
+        //shareImageMobile(dataUrl, blob)
+         if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        await shareImageMobile(dataUrl, blob);
+    } else {
+        // Desktop fallback
         await handleSharing(file, dataUrl, blob);
+    }
         
     } catch (error) {
         console.error('Share failed:', error);
@@ -947,6 +954,7 @@ async function handleSharing(file, dataUrl, blob) {
             return;
         } catch (shareError) {
             console.log('Web Share failed, falling back to alternative methods:', shareError);
+            await handleSharing(file, dataUrl, blob)
         }
     }
     
@@ -1114,10 +1122,6 @@ async function showSharingOptions(file, dataUrl, blob) {
                 <span style="font-size: 1.5em;">📋</span>
                 <span>Copy Image</span>
             </button>
-            <button id="previewShareBtn" class="share-option-btn" data-action="preview">
-                <span style="font-size: 1.5em;">👀</span>
-                <span>Preview & Save</span>
-            </button>
             <button id="dragShareBtn" class="share-option-btn" data-action="drag">
                 <span style="font-size: 1.5em;">🖱️</span>
                 <span>Drag & Drop</span>
@@ -1171,7 +1175,7 @@ async function showSharingOptions(file, dataUrl, blob) {
         link.download = `whatsapp-status-${Date.now()}.jpg`;
         link.href = dataUrl;
         link.click();
-        showTemporaryMessage('✅ Image downloaded! You can now share it');
+        showTemporaryMessage('✅ Image downloaded! view in Gallery');
         sharePopup.remove();
         style.remove();
     });
@@ -1192,11 +1196,11 @@ async function showSharingOptions(file, dataUrl, blob) {
         }
     });
     
-    document.getElementById('previewShareBtn').addEventListener('click', () => {
+    /*document.getElementById('previewShareBtn').addEventListener('click', () => {
         openImagePreview(dataUrl);
         sharePopup.remove();
         style.remove();
-    });
+    });*/
     
     document.getElementById('dragShareBtn').addEventListener('click', () => {
         createDraggableImage(dataUrl, blob);
