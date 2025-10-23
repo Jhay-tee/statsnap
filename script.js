@@ -993,7 +993,7 @@ async function shareImageMobile(dataUrl, blob) {
                 📱 Share via App
             </button>
             <button id="shareWhatsApp" style="background: #25D366; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px;">
-                💚 Share to WhatsApp
+                💚 Share Status
             </button>
             <button id="downloadMobile" style="background: #007bff; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px;">
                 💾 Download Image
