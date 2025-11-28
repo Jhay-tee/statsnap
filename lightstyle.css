@@ -164,6 +164,7 @@ main {
   padding: clamp(15px, 4vw, 20px);
   background-position: center;
   background-repeat: no-repeat;
+  overflow: hidden;
   background-size: cover;
   image-rendering: crisp-edges;
   animation: fadeIn 0.8s ease-out;
