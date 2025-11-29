@@ -989,6 +989,9 @@ async function shareImageMobile(dataUrl, blob) {
         <h3 style="margin-bottom: 20px; color: #25D366;">Share Image</h3>
         <p style="margin-bottom: 20px;">Choose how to share your status image:</p>
         <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button id="shareNative" style="background: #25D366; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px; display: none;">
+                📱 Share via App
+            </button>
             <button id="shareWhatsApp" style="background: #25D366; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px;">
                 💚 Share Status
             </button>
