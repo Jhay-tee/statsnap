@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statsnap Documentation</title>
+    <style>
+        :root {
+            --bg: #f8fafc; --text: #0f172a; --accent: #6366f1;
+            --border: #e2e8f0; --card: #ffffff;
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a; --text: #f1f5f9; --card: #1e293b; --border: #334155;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg); color: var(--text);
+            max-width: 800px; margin: 0 auto; padding: 30px 20px;
+            line-height: 1.7;
+        }
+        h1 { font-size: 2em; margin-bottom: 10px; color: var(--accent); }
+        h2 { font-size: 1.4em; margin: 30px 0 10px; border-bottom: 2px solid var(--border); padding-bottom: 5px; }
+        h3 { font-size: 1.1em; margin: 20px 0 8px; }
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; margin: 15px 0;
+        }
+        .tool-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .tool-item {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 12px;
+        }
+        .tool-item strong { color: var(--accent); }
+        kbd {
+            background: var(--border); padding: 2px 8px; border-radius: 4px;
+            font-size: 0.9em; font-family: monospace;
+        }
+        .shortcut-grid { display: grid; grid-template-columns: auto 1fr; gap: 8px 15px; }
+        .shortcut-grid kbd { text-align: center; }
+        @media (max-width: 600px) {
+            .tool-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <h1>📚 Statsnap Documentation</h1>
+    <p>Professional creative editor for social media content, photo editing, and collage creation.</p>
+
+    <h2>🎯 Modes</h2>
+    <div class="card">
+        <h3>✏️ Design Mode</h3>
+        <p>Create graphics with text, images, shapes, and stickers. Full layer management with drag, resize, rotate, and z-index control.</p>
+        <h3>🖼 Photo Mode</h3>
+        <p>Edit photos with professional tools: brightness, contrast, saturation, hue, filters, paint brush, blur brush, and crop.</p>
+        <h3>🎭 Collage Mode</h3>
+        <p>Create photo collages with 2, 3, or 4 grid templates. Canvas is fixed; images are placed in cells. Supports free-form collage.</p>
+    </div>
+
+    <h2>🛠 Tools Reference</h2>
+    
+    <h3>Design Mode Tools</h3>
+    <div class="tool-list">
+        <div class="tool-item"><strong>Text</strong> - Add editable text layers</div>
+        <div class="tool-item"><strong>Image</strong> - Import images from device</div>
+        <div class="tool-item"><strong>Shape</strong> - Add colored shape layers</div>
+        <div class="tool-item"><strong>Sticker</strong> - Add emoji stickers</div>
+        <div class="tool-item"><strong>Background</strong> - Change canvas background</div>
+        <div class="tool-item"><strong>Layers</strong> - View and manage layers</div>
+    </div>
+
+    <h3>Photo Mode Tools</h3>
+    <div class="tool-list">
+        <div class="tool-item"><strong>Add Photo</strong> - Import photo for editing</div>
+        <div class="tool-item"><strong>Adjust</strong> - Brightness, contrast, saturation, hue</div>
+        <div class="tool-item"><strong>Filters</strong> - 8 preset filters (Grayscale, Sepia, Vintage, etc.)</div>
+        <div class="tool-item"><strong>Crop</strong> - Use resize handles to crop</div>
+        <div class="tool-item"><strong>Paint</strong> - Draw on images with color brush</div>
+        <div class="tool-item"><strong>Blur</strong> - Blur specific areas of images</div>
+    </div>
+
+    <h3>Collage Mode Tools</h3>
+    <div class="tool-list">
+        <div class="tool-item"><strong>2 Grid</strong> - Two-cell grid layout</div>
+        <div class="tool-item"><strong>3 Grid</strong> - Three-cell grid layout</div>
+        <div class="tool-item"><strong>4 Grid</strong> - Four-cell grid layout</div>
+        <div class="tool-item"><strong>Free</strong> - Free-form collage</div>
+        <div class="tool-item"><strong>Background</strong> - Change canvas background</div>
+    </div>
+
+    <h3>Layer Tools (when layer selected)</h3>
+    <div class="tool-list">
+        <div class="tool-item"><strong>Lock</strong> - Prevent layer from moving</div>
+        <div class="tool-item"><strong>Duplicate</strong> - Create copy of layer</div>
+        <div class="tool-item"><strong>Opacity</strong> - Adjust layer transparency</div>
+        <div class="tool-item"><strong>Blend</strong> - Change blend mode (multiply, screen, overlay, etc.)</div>
+        <div class="tool-item"><strong>Front</strong> - Bring layer to front</div>
+        <div class="tool-item"><strong>Back</strong> - Send layer to back</div>
+    </div>
+
+    <h2>⌨️ Keyboard Shortcuts</h2>
+    <div class="card">
+        <div class="shortcut-grid">
+            <kbd>Ctrl+Z</kbd><span>Undo</span>
+            <kbd>Ctrl+Shift+Z</kbd><span>Redo</span>
+            <kbd>Ctrl+Plus</kbd><span>Zoom in</span>
+            <kbd>Ctrl+Minus</kbd><span>Zoom out</span>
+            <kbd>Ctrl+0</kbd><span>Reset zoom</span>
+            <kbd>Delete</kbd><span>Delete selected layer</span>
+            <kbd>Escape</kbd><span>Deselect / Stop brush</span>
+            <kbd>Scroll</kbd><span>Zoom in/out</span>
+        </div>
+    </div>
+
+    <h2>💡 Tips</h2>
+    <div class="card">
+        <ul style="padding-left:20px;">
+            <li>Switch modes anytime - your work is preserved</li>
+            <li>Lock layers to prevent accidental movement</li>
+            <li>Use pinch gesture on touch devices to zoom</li>
+            <li>Canvas size can be changed from the hamburger menu</li>
+            <li>Projects auto-save every 30 seconds</li>
+            <li>Export as JPEG or PNG from the menu</li>
+        </ul>
+    </div>
+
+    <p style="text-align:center;margin-top:40px;color:var(--accent);">Statsnap v4.0 - Professional Creative Editor</p>
+</body>
+</html>
