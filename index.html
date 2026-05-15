@@ -2,125 +2,162 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Status Generator</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link id="theme" rel="stylesheet" href="lightstyle.css"> 
-    <script src="script.js" defer></script>
-    <link href="https://fonts.googleapis.com/css?family=Arial:400,700|Courier+New:400,700|Georgia:400,700|Times+New+Roman:400,700|Trebuchet+MS:400,700|Verdana:400,700|Lucida+Console:400,700|Palatino+Linotype:400,700|Comic+Sans+MS:400,700|Impact:400,700|Open+Sans:400,700|Lato:400,700|Roboto:400,700|Montserrat:400,700|Oswald:400,700|Raleway:400,700|Merriweather:400,700|Ubuntu:400,700|PT+Sans:400,700|Noto+Sans:400,700|Fira+Sans:400,700|Dancing+Script:400,700|Pacifico:400,700|Indie+Flower:400,700|Great+Vibes:400,700|Cinzel:400,700|Bebas+Neue:400,700|Playfair+Display:400,700|Arvo:400,700|Quicksand:400,700|Cabin:400,700|Josefin+Sans:400,700|Varela+Round:400,700|Karla:400,700|Rubik:400,700|Mukta:400,700|Hind:400,700|Satisfy:400,700|Poppins:400,700|Cairo:400,700|Aldrich:400,700|Anton:400,700|Bangers:400,700|Bowlby+One+SC:400,700|Candal:400,700|Chivo:400,700&display=swap" rel="stylesheet">
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Statsnap - Professional Creative Editor</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#1a1a2e">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
-    <meta property="twitter:image" content="https://jhaystatsnap.vercel.app/lightthemeicon.png">
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="Turn your text and images into stunning social media statuses with Statsnap - the ultimate status generator! Customize fonts, colors, and backgrounds to create eye-catching posts in seconds. Perfect for WhatsApp, Instagram, Facebook, and more. Elevate your social media game with Statsnap today!">
-    <meta property="twitter:description" content="Turn your text and images into stunning social media statuses with Statsnap - the ultimate status generator! Customize fonts, colors, and backgrounds to create eye-catching posts in seconds. Perfect for WhatsApp, Instagram, Facebook, and more. Elevate your social media game with Statsnap today!">
-    <meta property="description" content="Status Generator" />
-    <meta property="og:image" content="https://jhaystatsnap.vercel.app/darkthemeicon.png">
-    <meta property="og:site_name" content="Statsnap - Ultimate Status Generator">
-    <meta property="og:title" content="Statsnap - Ultimate Status Generator">
-    <meta property="og:description" content="Turn your text and images into stunning social media statuses with Statsnap - the ultimate status generator! Customize fonts, colors, and backgrounds to create eye-catching posts in seconds. Perfect for WhatsApp, Instagram, Facebook, and more. Elevate your social media game with Statsnap today!">
-    <meta property="og:url" content="https://jhaystatsnap.vercel.app">
 </head>
 <body>
-   <nav>
-        <img id="logo" src="lightthemeicon.png" alt="App Logo" class="logo">
-        <button id="darkModeToggle">🌙</button>
-        <select  id="screenratio">
-          <option value = "1080x1920">9:16 (Whatsapp /IG story)</option>
-          <option value = "1080x1080">1:1   (IG)</option>
-          <option value = "1080x1350">4:5   (facebook post)</option>
-          <option value = "1920x1080">16:9   (Youtube video)</option>
-          </select>
-          <label for="fontsize" id="fonts">Font-Size<input type = "range" id="fontsize" min="10px" step="4px" max="40px"></label>
-          <label for = "fontweight" id="fonts">Text Boldness<input type="range" id="fontweight" min="100" step="100" max="900"></label>
-        <select  id="fontSelect">
-          <option value="Arial, sans-serif">Arial</option>
-          <option value="'Courier New', Courier, monospace">Courier New</option>
-          <option value="'Georgia', serif">Georgia</option>
-          <option value="'Times New Roman', Times, serif">Times New Roman</option>
-          <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-          <option value="'Verdana', sans-serif">Verdana</option>
-          <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
-          <option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino Linotype</option>
-          <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans MS</option>
-          <option value="'Impact', Charcoal, sans-serif">Impact</option>
-          <option value="'Open Sans', sans-serif">Open Sans</option>
-          <option value="'Lato', sans-serif">Lato</option>
-          <option value="'Roboto', sans-serif">Roboto</option>
-            <option value="'Montserrat', sans-serif">Montserrat</option>
-            <option value="'Oswald', sans-serif">Oswald</option>
-            <option value="'Raleway', sans-serif">Raleway</option>
-            <option value="'Merriweather', serif">Merriweather</option>
-            <option value="'Ubuntu', sans-serif">Ubuntu</option>
-            <option value="'PT Sans', sans-serif">PT Sans</option>
-            <option value="'Noto Sans', sans-serif">Noto Sans</option>
-            <option value="'Fira Sans', sans-serif">Fira Sans</option>
-            <option value="'Dancing Script', cursive">Dancing Script</option>
-            <option value="'Pacifico', cursive">Pacifico</option>
-            <option value="'Indie Flower', cursive">Indie Flower</option>
-            <option value="'Great Vibes', cursive">Great Vibes</option>
-            <option value="'Cinzel', serif">Cinzel</option>
-            <option value="'Bebas Neue', cursive">Bebas Neue</option>
-            <option value="'Playfair Display', serif">Playfair Display</option>
-            <option value="'Arvo', serif">Arvo</option>
-            <option value="'Quicksand', sans-serif">Quicksand</option>
-            <option value="'Cabin', sans-serif">Cabin</option>
-            <option value="'Josefin Sans', sans-serif">Josefin Sans</option>
-            <option value="'Varela Round', sans-serif">Varela Round</option>
-            <option value="'Karla', sans-serif">Karla</option>
-            <option value="'Rubik', sans-serif">Rubik</option>
-            <option value="'Mukta', sans-serif">Mukta</option>
-            <option value="'Hind', sans-serif">Hind</option>
-            <option value="'Satisfy', cursive">Satisfy</option>
-            <option value = "poppins, sans-serif">Poppins</option>
-            <option value = "cairo, sans-serif">Cairo</option>
-            <option value = "aldrich, sans-serif">Aldrich</option>
-            <option value = "anton, sans-serif">Anton</option>
-            <option value = "bangers, cursive">Bangers</option>
-            <option value = "bowlby one sc, cursive">Bowlby One SC</option>
-            <option value = "candal, sans-serif">Candal</option>
-            <option value = "chivo, sans-serif">Chivo</option>
-          </select>
-
-      </nav>
-    <main>
-        <div class="centered">
-        <section class="status-box" aria-label="Status creation area" id="statusBox">
-            <article 
-                class="editable-text" 
-                contenteditable="true" 
-                spellcheck="false" 
-                role="textarea"
-                aria-label="Editable status text"></article>
-        </section>
+    <!-- Top Navigation Bar -->
+    <nav id="topNav">
+        <div class="nav-left">
+            <button id="menuBtn" class="icon-btn" aria-label="Menu">☰</button>
+            <span class="app-title">Statsnap</span>
         </div>
-        <section id="buttnz">
-        <button id="importBtn" onclick="getImage()">Import images from web</button>
-        <div id="button-container">
-        <select  id="gradientSelect">
-          <option value="none">No Gradient</option>
-          <option value="to right">left and right</option>
-          <option value="to left">right and left</option>
-          <option value="to bottom">top and bottom</option>
-          <option value="to top">bottom and top</option>
-          <option value="to bottom right">top left to bottom right</option>
-          <option value="to bottom left">top right to bottom left</option>
-          <option value="to top right">bottom left to top right</option>
-          <option value="to top left">bottom right to top left</option>
-          <option value="radial">radial</option>
+        <div class="nav-center">
+            <div class="mode-selector">
+                <button class="mode-btn active" data-mode="design">✏️ Design</button>
+                <button class="mode-btn" data-mode="photo">🖼 Photo</button>
+                <button class="mode-btn" data-mode="collage">🎭 Collage</button>
+            </div>
+        </div>
+        <div class="nav-right">
+            <button id="undoBtn" class="icon-btn" aria-label="Undo" disabled>↩️</button>
+            <button id="redoBtn" class="icon-btn" aria-label="Redo" disabled>↪️</button>
+            <button id="themeToggle" class="icon-btn" aria-label="Toggle theme">🌓</button>
+        </div>
+    </nav>
 
-          </select>
-          <div id="bgcol">
-          <label for="bkgcol" class="upload" id="bckgcolz">set background color</label>
-          <input type="color" id="bkgcol" style="display: none;"></div>
-          <div id="txt">
-          <label for="txtcol" class="upload" id="txtcolz">select text color</label><br>
-          <input type="color" id="txtcol" style="display: none;"></div>
-          <label for="backimg" class="upload" >set background image</label>
-          <input type="file" id="backimg" style="display: none;" accept="image/*">
-          </div>
-          <!-- <button id="downloadBtn">Download Status</button> -->
-          <button id="copyBtn">Download / share Status</button>
-          </section>
-    </main>
+    <!-- Canvas Area -->
+    <div id="canvasContainer">
+        <div id="mainCanvas" class="canvas">
+            <!-- Layers will be dynamically created here -->
+        </div>
+        <div id="canvasOverlay" class="canvas-overlay">
+            <p id="emptyState">Tap + to add content</p>
+        </div>
+        <!-- Brush canvas overlay for paint/blur brushes -->
+        <canvas id="brushCanvas" style="display:none; position:absolute; top:0; left:0; pointer-events:none;"></canvas>
+    </div>
+
+    <!-- Bottom Toolbar Container -->
+    <div id="bottomToolbarContainer">
+        <!-- Context-Aware Toolbar -->
+        <div id="contextToolbar" class="toolbar">
+            <!-- Default tools - Add content -->
+            <div id="defaultTools" class="tool-group active">
+                <button class="tool-btn" data-action="addText">
+                    <span class="tool-icon">T</span>
+                    <span class="tool-label">Text</span>
+                </button>
+                <button class="tool-btn" data-action="addImage">
+                    <span class="tool-icon">🖼</span>
+                    <span class="tool-label">Image</span>
+                </button>
+                <button class="tool-btn" data-action="addShape">
+                    <span class="tool-icon">⬜</span>
+                    <span class="tool-label">Shape</span>
+                </button>
+                <button class="tool-btn" data-action="changeBackground">
+                    <span class="tool-icon">🎨</span>
+                    <span class="tool-label">BG</span>
+                </button>
+                <button class="tool-btn" data-action="exportImage">
+                    <span class="tool-icon">📤</span>
+                    <span class="tool-label">Export</span>
+                </button>
+            </div>
+
+            <!-- Text editing tools -->
+            <div id="textTools" class="tool-group">
+                <button class="tool-btn" data-action="textColor">
+                    <span class="tool-icon">🌈</span>
+                    <span class="tool-label">Color</span>
+                </button>
+                <button class="tool-btn" data-action="textBold">
+                    <span class="tool-icon">𝐁</span>
+                    <span class="tool-label">Bold</span>
+                </button>
+                <button class="tool-btn" data-action="textAlign">
+                    <span class="tool-icon">≡</span>
+                    <span class="tool-label">Align</span>
+                </button>
+                <button class="tool-btn" data-action="dropShadow">
+                    <span class="tool-icon">◈</span>
+                    <span class="tool-label">Shadow</span>
+                </button>
+                <button class="tool-btn" data-action="deleteLayer">
+                    <span class="tool-icon">🗑</span>
+                    <span class="tool-label">Delete</span>
+                </button>
+            </div>
+
+            <!-- Image editing tools -->
+            <div id="imageTools" class="tool-group">
+                <button class="tool-btn" data-action="imageAdjust">
+                    <span class="tool-icon">⚙️</span>
+                    <span class="tool-label">Adjust</span>
+                </button>
+                <button class="tool-btn" data-action="imageFilter">
+                    <span class="tool-icon">✨</span>
+                    <span class="tool-label">Filter</span>
+                </button>
+                <button class="tool-btn" data-action="paintBrush">
+                    <span class="tool-icon">🖌</span>
+                    <span class="tool-label">Paint</span>
+                </button>
+                <button class="tool-btn" data-action="blurBrush">
+                    <span class="tool-icon">💧</span>
+                    <span class="tool-label">Blur</span>
+                </button>
+                <button class="tool-btn" data-action="deleteLayer">
+                    <span class="tool-icon">🗑</span>
+                    <span class="tool-label">Delete</span>
+                </button>
+            </div>
+
+            <!-- Shape editing tools -->
+            <div id="shapeTools" class="tool-group">
+                <button class="tool-btn" data-action="shapeColor">
+                    <span class="tool-icon">🎨</span>
+                    <span class="tool-label">Fill</span>
+                </button>
+                <button class="tool-btn" data-action="shapeBorder">
+                    <span class="tool-icon">⬚</span>
+                    <span class="tool-label">Border</span>
+                </button>
+                <button class="tool-btn" data-action="dropShadow">
+                    <span class="tool-icon">◈</span>
+                    <span class="tool-label">Shadow</span>
+                </button>
+                <button class="tool-btn" data-action="deleteLayer">
+                    <span class="tool-icon">🗑</span>
+                    <span class="tool-label">Delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide-up Panel for extended controls -->
+    <div id="slidePanel" class="slide-panel">
+        <div class="panel-header">
+            <span id="panelTitle">Settings</span>
+            <button id="closePanel" class="icon-btn">✕</button>
+        </div>
+        <div id="panelContent" class="panel-content"></div>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modalContainer"></div>
+
+    <!-- Color Picker Popup -->
+    <div id="colorPickerPopup" class="color-picker-popup" style="display:none;">
+        <div class="color-grid" id="colorGrid"></div>
+        <input type="color" id="customColorInput" value="#000000">
+    </div>
+
+    <script src="script.js"></script>
 </body>
-</html>
+                                                 </html>
