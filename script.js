@@ -1,1329 +1,1352 @@
-// Configuration constants
-const CONFIG = {
-    MAX_IMAGE_SIZE: 5 * 1024 * 1024, // 5MB
-    DEFAULT_RATIO: '1080x1920',
-    QUALITY: 0.96,
-    DEBOUNCE_DELAY: 300,
-    MAX_DIMENSION: 10000
-};
+// ============================================
+// STATSNAP - Professional Creative Editor
+// Complete Layer-Based Editing System
+// ============================================
 
-// DOM Elements
-const select = document.getElementById("screenratio");
-const statusBox = document.querySelector(".status-box");
-const txtcolor = document.getElementById("txtcol");
-const statusText = document.querySelector(".editable-text");
-const backgcol = document.getElementById("bkgcol");
-const backimg = document.getElementById("backimg");
-const gradientSelect = document.getElementById("gradientSelect");
-const fontSize = document.getElementById("fontsize");
-const fontWeight = document.getElementById("fontweight");
-
-// Status Manager Object for better organization
-const StatusManager = {
-    init() {
-        this.loadSavedState();
-        this.bindEvents();
-        this.enhanceAccessibility();
-    },
+class StatsnapEditor {
+    constructor() {
+        this.canvas = document.getElementById('mainCanvas');
+        this.brushCanvas = document.getElementById('brushCanvas');
+        this.layers = [];
+        this.selectedLayer = null;
+        this.currentMode = 'design';
+        this.layerIdCounter = 0;
+        this.isDragging = false;
+        this.isResizing = false;
+        this.isBrushing = false;
+        this.currentBrushType = null; // 'paint' or 'blur'
+        this.brushColor = '#000000';
+        this.brushSize = 30;
+        this.dragStartPos = { x: 0, y: 0 };
+        this.initialLayerState = null;
+        
+        // Undo/Redo
+        this.undoStack = [];
+        this.redoStack = [];
+        this.maxHistorySize = 50;
+        this.saveTimeout = null;
+        
+        // Auto-save
+        this.autoSaveInterval = null;
+        this.db = null;
+        
+        // Color palette
+        this.colorPalette = [
+            '#000000', '#ffffff', '#ef4444', '#f97316', '#f59e0b', '#eab308',
+            '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+            '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+            '#f43f5e', '#78716c', '#6b7280', '#374151', '#1f2937', '#111827',
+            '#fef3c7', '#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706',
+            '#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a',
+            '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb'
+        ];
+        
+        this.init();
+    }
     
-    loadSavedState() {
-        try {
-            const config = {
-                theme: localStorage.getItem('theme'),
-                fontSize: localStorage.getItem('fontSize'),
-                fontWeight: localStorage.getItem('fontWeight'),
-                screenratio: localStorage.getItem('screenratio'),
-                fontSelect: localStorage.getItem('fontSelect'),
-                txtcolor: localStorage.getItem('txtcolor'),
-                bkgcol: localStorage.getItem('bkgcol'),
-                gradientSelect: localStorage.getItem('gradientSelect'),
-                statusText: localStorage.getItem('statusText'),
-                logo: localStorage.getItem('logo')
+    async init() {
+        this.setupTheme();
+        this.setupEventListeners();
+        this.setupBrushCanvas();
+        this.setupColorPalette();
+        await this.initDatabase();
+        await this.loadProject();
+        this.startAutoSave();
+        this.updateUndoRedoButtons();
+    }
+    
+    setupTheme() {
+        const savedTheme = localStorage.getItem('statsnap-theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    }
+    
+    toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('statsnap-theme', next);
+    }
+    
+    setupBrushCanvas() {
+        this.brushCanvas.width = this.canvas.offsetWidth;
+        this.brushCanvas.height = this.canvas.offsetHeight;
+        this.brushCanvas.style.position = 'absolute';
+        this.brushCanvas.style.top = '0';
+        this.brushCanvas.style.left = '0';
+        this.brushCanvas.style.pointerEvents = 'none';
+        this.brushCanvas.style.zIndex = '998';
+        this.canvas.appendChild(this.brushCanvas);
+    }
+    
+    setupColorPalette() {
+        const colorGrid = document.getElementById('colorGrid');
+        if (!colorGrid) return;
+        
+        colorGrid.innerHTML = '';
+        this.colorPalette.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.classList.add('color-swatch');
+            swatch.style.backgroundColor = color;
+            swatch.addEventListener('click', () => {
+                this.brushColor = color;
+                document.getElementById('customColorInput').value = color;
+                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+                swatch.classList.add('selected');
+            });
+            colorGrid.appendChild(swatch);
+        });
+    }
+    
+    setupEventListeners() {
+        // Mode switching
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.switchMode(e.target.dataset.mode);
+            });
+        });
+        
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
+        
+        // Undo/Redo buttons
+        document.getElementById('undoBtn').addEventListener('click', () => this.undo());
+        document.getElementById('redoBtn').addEventListener('click', () => this.redo());
+        
+        // Close panel
+        document.getElementById('closePanel').addEventListener('click', () => this.closeSlidePanel());
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                this.undo();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
+                e.preventDefault();
+                this.redo();
+            } else if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (this.selectedLayer && document.activeElement === document.body) {
+                    this.deleteSelectedLayer();
+                }
+            } else if (e.key === 'Escape') {
+                this.stopBrushing();
+                this.closeSlidePanel();
+                this.deselectAllLayers();
+            }
+        });
+        
+        // Tool actions
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = btn.dataset.action;
+                this.handleToolAction(action, btn);
+            });
+        });
+        
+        // Canvas click to deselect
+        this.canvas.addEventListener('pointerdown', (e) => {
+            if (e.target === this.canvas) {
+                this.stopBrushing();
+                this.deselectAllLayers();
+            }
+        });
+        
+        // Brush events on canvas
+        this.canvas.addEventListener('pointerdown', (e) => this.handleBrushStart(e));
+        this.canvas.addEventListener('pointermove', (e) => this.handleBrushMove(e));
+        this.canvas.addEventListener('pointerup', () => this.handleBrushEnd());
+        this.canvas.addEventListener('pointerleave', () => this.handleBrushEnd());
+        
+        // Custom color input
+        const customColorInput = document.getElementById('customColorInput');
+        if (customColorInput) {
+            customColorInput.addEventListener('input', (e) => {
+                this.brushColor = e.target.value;
+            });
+        }
+    }
+    
+    switchMode(mode) {
+        if (this.currentMode === mode) return;
+        this.stopBrushing();
+        this.currentMode = mode;
+        
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+        
+        this.deselectAllLayers();
+        this.updateContextualTools();
+        this.showToast(`${mode.charAt(0).toUpperCase() + mode.slice(1)} mode`);
+    }
+    
+    // =============== TOOL HANDLING ===============
+    
+    handleToolAction(action, btn) {
+        // Toggle brush tools
+        if (action === 'paintBrush') {
+            this.toggleBrushTool('paint', btn);
+            return;
+        }
+        if (action === 'blurBrush') {
+            this.toggleBrushTool('blur', btn);
+            return;
+        }
+        
+        this.stopBrushing();
+        
+        switch(action) {
+            case 'addText': this.addTextLayer(); break;
+            case 'addImage': this.addImageLayer(); break;
+            case 'addShape': this.addShapeLayer(); break;
+            case 'changeBackground': this.changeBackground(); break;
+            case 'exportImage': this.exportCanvas(); break;
+            case 'deleteLayer': this.deleteSelectedLayer(); break;
+            case 'textColor': this.openColorPicker('text'); break;
+            case 'textBold': this.openBoldnessSlider(); break;
+            case 'textAlign': this.openTextAlignPanel(); break;
+            case 'dropShadow': this.openDropShadowPanel(); break;
+            case 'imageAdjust': this.openImageAdjustPanel(); break;
+            case 'imageFilter': this.openImageFilterPanel(); break;
+            case 'shapeColor': this.openColorPicker('shape'); break;
+            case 'shapeBorder': this.openShapeBorderPanel(); break;
+        }
+    }
+    
+    toggleBrushTool(type, btn) {
+        if (this.currentBrushType === type) {
+            this.stopBrushing();
+            return;
+        }
+        
+        this.stopBrushing();
+        this.currentBrushType = type;
+        btn.classList.add('active-tool');
+        
+        if (type === 'paint') {
+            this.showColorPickerPopup();
+        }
+        
+        this.showBrushSizeSlider();
+        this.brushCanvas.style.pointerEvents = 'auto';
+        this.showToast(`${type === 'paint' ? 'Paint' : 'Blur'} brush activated`);
+    }
+    
+    stopBrushing() {
+        this.currentBrushType = null;
+        this.isBrushing = false;
+        this.brushCanvas.style.pointerEvents = 'none';
+        this.hideBrushIndicator();
+        this.hideColorPickerPopup();
+        
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active-tool'));
+        this.closeSlidePanel();
+    }
+    
+    // =============== BRUSH SYSTEM ===============
+    
+    handleBrushStart(e) {
+        if (!this.currentBrushType) return;
+        if (e.target === this.canvas || e.target === this.brushCanvas || e.target.closest('.layer')) {
+            this.isBrushing = true;
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            this.lastBrushPos = { x, y };
+            this.brushPoints = [{ x, y }];
+            this.showBrushIndicator(e.clientX, e.clientY);
+        }
+    }
+    
+    handleBrushMove(e) {
+        if (!this.isBrushing || !this.currentBrushType) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        this.showBrushIndicator(e.clientX, e.clientY);
+        this.brushPoints.push({ x, y });
+        
+        // Draw on brush canvas
+        const ctx = this.brushCanvas.getContext('2d');
+        ctx.globalCompositeOperation = this.currentBrushType === 'paint' ? 'source-over' : 'destination-over';
+        
+        if (this.currentBrushType === 'paint') {
+            this.drawPaintStroke(ctx, this.lastBrushPos, { x, y });
+        } else if (this.currentBrushType === 'blur') {
+            this.drawBlurStroke(ctx, this.lastBrushPos, { x, y });
+        }
+        
+        this.lastBrushPos = { x, y };
+    }
+    
+    handleBrushEnd() {
+        if (!this.isBrushing) return;
+        this.isBrushing = false;
+        this.hideBrushIndicator();
+        
+        // Apply brush effect to selected layer or canvas
+        if (this.brushPoints && this.brushPoints.length > 0) {
+            this.applyBrushEffect();
+        }
+        
+        this.brushPoints = [];
+        
+        // Clear brush canvas
+        const ctx = this.brushCanvas.getContext('2d');
+        ctx.clearRect(0, 0, this.brushCanvas.width, this.brushCanvas.height);
+    }
+    
+    drawPaintStroke(ctx, from, to) {
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = this.brushColor;
+        ctx.lineWidth = this.brushSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+    }
+    
+    drawBlurStroke(ctx, from, to) {
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = this.brushSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.filter = `blur(${this.brushSize / 4}px)`;
+        ctx.stroke();
+        ctx.filter = 'none';
+    }
+    
+    applyBrushEffect() {
+        if (!this.selectedLayer || this.selectedLayer.dataset.type !== 'image') return;
+        
+        const img = this.selectedLayer.querySelector('img');
+        if (!img) return;
+        
+        // Create a canvas to apply the effect
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = this.selectedLayer.offsetWidth;
+        tempCanvas.height = this.selectedLayer.offsetHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // Draw the image
+        tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        if (this.currentBrushType === 'paint') {
+            // Apply paint strokes
+            const brushCtx = this.brushCanvas.getContext('2d');
+            tempCtx.drawImage(this.brushCanvas, 0, 0);
+        } else if (this.currentBrushType === 'blur') {
+            // Apply blur to brushed areas using a mask
+            const blurCanvas = document.createElement('canvas');
+            blurCanvas.width = tempCanvas.width;
+            blurCanvas.height = tempCanvas.height;
+            const blurCtx = blurCanvas.getContext('2d');
+            blurCtx.filter = `blur(${this.brushSize / 2}px)`;
+            blurCtx.drawImage(img, 0, 0, blurCanvas.width, blurCanvas.height);
+            
+            // Create mask from brush strokes
+            const maskCanvas = document.createElement('canvas');
+            maskCanvas.width = tempCanvas.width;
+            maskCanvas.height = tempCanvas.height;
+            const maskCtx = maskCanvas.getContext('2d');
+            maskCtx.drawImage(this.brushCanvas, 0, 0);
+            
+            // Composite: blurred image where mask is, original elsewhere
+            tempCtx.globalCompositeOperation = 'destination-out';
+            tempCtx.drawImage(maskCanvas, 0, 0);
+            tempCtx.globalCompositeOperation = 'destination-over';
+            tempCtx.drawImage(blurCanvas, 0, 0);
+        }
+        
+        // Update the image
+        img.src = tempCanvas.toDataURL();
+        this.saveState();
+        this.scheduleAutoSave();
+    }
+    
+    showBrushIndicator(x, y) {
+        let indicator = document.querySelector('.brush-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.classList.add('brush-indicator');
+            document.body.appendChild(indicator);
+        }
+        indicator.style.display = 'block';
+        indicator.style.left = x + 'px';
+        indicator.style.top = y + 'px';
+        indicator.style.width = this.brushSize + 'px';
+        indicator.style.height = this.brushSize + 'px';
+    }
+    
+    hideBrushIndicator() {
+        const indicator = document.querySelector('.brush-indicator');
+        if (indicator) indicator.style.display = 'none';
+    }
+    
+    showBrushSizeSlider() {
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Brush Size';
+        
+        content.innerHTML = `
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Size</span>
+                    <span class="control-value" id="brushSizeValue">${this.brushSize}px</span>
+                </div>
+                <input type="range" id="brushSizeSlider" min="5" max="100" value="${this.brushSize}">
+            </div>
+        `;
+        
+        this.openSlidePanel();
+        
+        document.getElementById('brushSizeSlider').addEventListener('input', (e) => {
+            this.brushSize = parseInt(e.target.value);
+            document.getElementById('brushSizeValue').textContent = this.brushSize + 'px';
+        });
+    }
+    
+    // =============== LAYER MANAGEMENT ===============
+    
+    addTextLayer(text = 'Double tap to edit') {
+        const layer = this.createLayer('text');
+        layer.innerHTML = text;
+        layer.setAttribute('contenteditable', 'true');
+        layer.setAttribute('data-placeholder', 'Type here...');
+        layer.classList.add('text-layer');
+        
+        this.centerLayer(layer);
+        
+        layer.addEventListener('dblclick', () => layer.focus());
+        layer.addEventListener('input', () => this.scheduleAutoSave());
+        
+        this.addLayerToCanvas(layer);
+        this.selectLayer(layer);
+        this.saveState();
+    }
+    
+    addImageLayer(imageUrl = null) {
+        if (imageUrl) {
+            this.createImageLayerFromUrl(imageUrl);
+        } else {
+            this.promptImageUpload();
+        }
+    }
+    
+    promptImageUpload() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
+        
+        input.addEventListener('change', (e) => {
+            Array.from(e.target.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    this.createImageLayerFromUrl(event.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+        
+        input.click();
+    }
+    
+    createImageLayerFromUrl(url) {
+        const layer = this.createLayer('image');
+        layer.classList.add('image-layer');
+        
+        const img = document.createElement('img');
+        img.src = url;
+        img.draggable = false;
+        img.style.filter = 'none';
+        img.dataset.originalSrc = url;
+        layer.appendChild(img);
+        
+        // Set initial size based on image
+        img.onload = () => {
+            const maxDim = 300;
+            let w = img.naturalWidth;
+            let h = img.naturalHeight;
+            if (w > maxDim) {
+                h = (maxDim / w) * h;
+                w = maxDim;
+            }
+            layer.style.width = w + 'px';
+            layer.style.height = h + 'px';
+        };
+        
+        this.centerLayer(layer);
+        this.addLayerToCanvas(layer);
+        this.selectLayer(layer);
+        this.saveState();
+    }
+    
+    addShapeLayer(shape = 'rectangle') {
+        const layer = this.createLayer('shape');
+        layer.classList.add('shape-layer');
+        layer.style.background = '#6366f1';
+        layer.style.width = '120px';
+        layer.style.height = '120px';
+        layer.style.borderRadius = shape === 'circle' ? '50%' : '8px';
+        
+        this.centerLayer(layer);
+        this.addLayerToCanvas(layer);
+        this.selectLayer(layer);
+        this.saveState();
+    }
+    
+    createLayer(type) {
+        const layer = document.createElement('div');
+        const id = `layer-${++this.layerIdCounter}`;
+        layer.id = id;
+        layer.classList.add('layer');
+        layer.dataset.type = type;
+        layer.dataset.zIndex = this.layers.length + 1;
+        layer.style.zIndex = this.layers.length + 1;
+        
+        this.addResizeHandles(layer);
+        this.addRotateHandle(layer);
+        this.setupDragHandlers(layer);
+        
+        layer.addEventListener('pointerdown', (e) => {
+            if (this.isBrushing) return;
+            e.stopPropagation();
+            this.selectLayer(layer);
+        });
+        
+        return layer;
+    }
+    
+    addResizeHandles(layer) {
+        const positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top-center', 'bottom-center', 'left-center', 'right-center'];
+        positions.forEach(pos => {
+            const handle = document.createElement('div');
+            handle.classList.add('resize-handle', pos);
+            handle.dataset.position = pos;
+            this.setupResizeHandlers(handle, layer);
+            layer.appendChild(handle);
+        });
+    }
+    
+    addRotateHandle(layer) {
+        const handle = document.createElement('div');
+        handle.classList.add('rotate-handle');
+        handle.innerHTML = '↻';
+        this.setupRotateHandlers(handle, layer);
+        layer.appendChild(handle);
+    }
+    
+    setupDragHandlers(layer) {
+        let startX, startY, initialLeft, initialTop;
+        
+        layer.addEventListener('pointerdown', (e) => {
+            if (this.isBrushing) return;
+            if (e.target === layer || e.target.classList.contains('text-layer') || e.target.tagName === 'IMG') {
+                this.isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialLeft = parseInt(layer.style.left) || 0;
+                initialTop = parseInt(layer.style.top) || 0;
+                
+                layer.setPointerCapture(e.pointerId);
+                layer.classList.add('dragging');
+                this.dragStartPos = { left: initialLeft, top: initialTop };
+            }
+        });
+        
+        layer.addEventListener('pointermove', (e) => {
+            if (!this.isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            layer.style.left = `${initialLeft + dx}px`;
+            layer.style.top = `${initialTop + dy}px`;
+        });
+        
+        layer.addEventListener('pointerup', () => {
+            if (this.isDragging) {
+                this.isDragging = false;
+                layer.classList.remove('dragging');
+                
+                const currentLeft = parseInt(layer.style.left) || 0;
+                const currentTop = parseInt(layer.style.top) || 0;
+                
+                if (currentLeft !== this.dragStartPos.left || currentTop !== this.dragStartPos.top) {
+                    this.saveState();
+                    this.scheduleAutoSave();
+                }
+            }
+        });
+    }
+    
+    setupResizeHandlers(handle, layer) {
+        handle.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            this.isResizing = true;
+            handle.setPointerCapture(e.pointerId);
+            
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startWidth = layer.offsetWidth;
+            const startHeight = layer.offsetHeight;
+            const startLeft = parseInt(layer.style.left) || 0;
+            const startTop = parseInt(layer.style.top) || 0;
+            const position = handle.dataset.position;
+            
+            const onMove = (e) => {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                let newWidth = startWidth, newHeight = startHeight;
+                let newLeft = startLeft, newTop = startTop;
+                
+                switch(position) {
+                    case 'bottom-right':
+                        newWidth = Math.max(30, startWidth + dx);
+                        newHeight = Math.max(30, startHeight + dy);
+                        break;
+                    case 'bottom-left':
+                        newWidth = Math.max(30, startWidth - dx);
+                        newHeight = Math.max(30, startHeight + dy);
+                        newLeft = startLeft + dx;
+                        break;
+                    case 'top-right':
+                        newWidth = Math.max(30, startWidth + dx);
+                        newHeight = Math.max(30, startHeight - dy);
+                        newTop = startTop + dy;
+                        break;
+                    case 'top-left':
+                        newWidth = Math.max(30, startWidth - dx);
+                        newHeight = Math.max(30, startHeight - dy);
+                        newLeft = startLeft + dx;
+                        newTop = startTop + dy;
+                        break;
+                    case 'bottom-center':
+                        newHeight = Math.max(30, startHeight + dy);
+                        break;
+                    case 'top-center':
+                        newHeight = Math.max(30, startHeight - dy);
+                        newTop = startTop + dy;
+                        break;
+                    case 'right-center':
+                        newWidth = Math.max(30, startWidth + dx);
+                        break;
+                    case 'left-center':
+                        newWidth = Math.max(30, startWidth - dx);
+                        newLeft = startLeft + dx;
+                        break;
+                }
+                
+                layer.style.width = `${newWidth}px`;
+                layer.style.height = `${newHeight}px`;
+                layer.style.left = `${newLeft}px`;
+                layer.style.top = `${newTop}px`;
             };
             
-            Object.entries(config).forEach(([key, value]) => {
-                if (value) this.applySetting(key, value);
-            });
-
-            // Load background image
-            const bgData = localStorage.getItem('bgImageData');
-            if (bgData) {
-                statusBox.style.backgroundImage = `url("${bgData}")`;
-                statusBox.style.backgroundSize = 'cover';
-                statusBox.style.backgroundPosition = 'center';
-                statusBox.style.backgroundRepeat = 'no-repeat';
-                statusBox.style.backgroundColor = 'transparent';
-            }
-
-            this.loadSharedStatus();
-        } catch (err) {
-            console.error('Error loading saved state:', err);
-        }
-    },
+            const onUp = () => {
+                this.isResizing = false;
+                document.removeEventListener('pointermove', onMove);
+                document.removeEventListener('pointerup', onUp);
+                this.saveState();
+                this.scheduleAutoSave();
+            };
+            
+            document.addEventListener('pointermove', onMove);
+            document.addEventListener('pointerup', onUp);
+        });
+    }
     
-    applySetting(key, value) {
-        const setters = {
-            theme: (val) => this.setTheme(val),
-            fontSize: (val) => {
-                if (fontSize) {
-                    fontSize.value = val;
-                    updateFontSize();
-                }
-            },
-            fontWeight: (val) => {
-                if (fontWeight) {
-                    fontWeight.value = val;
-                    updateFontWeight();
-                }
-            },
-            screenratio: (val) => {
-            if (select) {
-                select.value = val;
-                // ADD THESE LINES to actually apply the ratio:
-                let [w, h] = val.split("x");
-                statusBox.style.width = (w/4) + "px";
-                statusBox.style.height = (h/4) + "px";
+    setupRotateHandlers(handle, layer) {
+        handle.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            handle.setPointerCapture(e.pointerId);
+            
+            const rect = layer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            let startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+            const currentRotation = parseFloat(layer.dataset.rotation || 0);
+            
+            const onMove = (e) => {
+                const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                const rotation = currentRotation + (currentAngle - startAngle) * (180 / Math.PI);
+                layer.style.transform = `rotate(${rotation}deg)`;
+                layer.dataset.rotation = rotation;
+            };
+            
+            const onUp = () => {
+                document.removeEventListener('pointermove', onMove);
+                document.removeEventListener('pointerup', onUp);
+                this.saveState();
+                this.scheduleAutoSave();
+            };
+            
+            document.addEventListener('pointermove', onMove);
+            document.addEventListener('pointerup', onUp);
+        });
+    }
+    
+    addLayerToCanvas(layer) {
+        this.canvas.appendChild(layer);
+        this.layers.push(layer);
+        this.updateEmptyState();
+        this.updateContextualTools();
+    }
+    
+    selectLayer(layer) {
+        this.deselectAllLayers();
+        layer.classList.add('selected');
+        this.selectedLayer = layer;
+        this.updateContextualTools();
+    }
+    
+    deselectAllLayers() {
+        this.layers.forEach(l => l.classList.remove('selected'));
+        this.selectedLayer = null;
+        this.updateContextualTools();
+    }
+    
+    deleteSelectedLayer() {
+        if (!this.selectedLayer) return;
+        const layer = this.selectedLayer;
+        layer.remove();
+        this.layers = this.layers.filter(l => l !== layer);
+        this.selectedLayer = null;
+        this.updateEmptyState();
+        this.updateContextualTools();
+        this.saveState();
+        this.scheduleAutoSave();
+        this.showToast('Layer deleted');
+    }
+    
+    centerLayer(layer) {
+        const canvasW = this.canvas.offsetWidth;
+        const canvasH = this.canvas.offsetHeight;
+        const layerW = parseInt(layer.style.width) || 120;
+        const layerH = parseInt(layer.style.height) || 120;
+        layer.style.left = `${(canvasW - layerW) / 2}px`;
+        layer.style.top = `${(canvasH - layerH) / 2}px`;
+    }
+    
+    updateEmptyState() {
+        document.getElementById('emptyState').style.display = this.layers.length === 0 ? 'block' : 'none';
+    }
+    
+    updateContextualTools() {
+        document.querySelectorAll('.tool-group').forEach(g => g.classList.remove('active'));
+        
+        if (!this.selectedLayer) {
+            document.getElementById('defaultTools').classList.add('active');
+        } else {
+            const type = this.selectedLayer.dataset.type;
+            switch(type) {
+                case 'text': document.getElementById('textTools').classList.add('active'); break;
+                case 'image': document.getElementById('imageTools').classList.add('active'); break;
+                case 'shape': document.getElementById('shapeTools').classList.add('active'); break;
             }
-            },
-            fontSelect: (val) => {
-                const fontSelect = document.getElementById("fontSelect");
-                if (fontSelect && statusText) {
-                    fontSelect.value = val;
-                    statusText.style.fontFamily = val;
+        }
+    }
+    
+    // =============== SLIDE PANEL ===============
+    
+    openSlidePanel() {
+        document.getElementById('slidePanel').classList.add('open');
+    }
+    
+    closeSlidePanel() {
+        document.getElementById('slidePanel').classList.remove('open');
+    }
+    
+    // =============== COLOR PICKER ===============
+    
+    openColorPicker(target) {
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Choose Color';
+        
+        content.innerHTML = `
+            <div class="color-grid" id="panelColorGrid"></div>
+            <input type="color" id="panelColorInput" value="${this.brushColor}" style="width:100%;height:40px;margin-top:8px;">
+        `;
+        
+        this.openSlidePanel();
+        
+        const grid = document.getElementById('panelColorGrid');
+        this.colorPalette.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.classList.add('color-swatch');
+            swatch.style.backgroundColor = color;
+            swatch.addEventListener('click', () => {
+                const colorValue = color;
+                document.getElementById('panelColorInput').value = colorValue;
+                if (target === 'text' && this.selectedLayer) {
+                    this.selectedLayer.style.color = colorValue;
+                } else if (target === 'shape' && this.selectedLayer) {
+                    this.selectedLayer.style.background = colorValue;
                 }
-            },
-            txtcolor: (val) => {
-                if (txtcolor && statusText) {
-                    txtcolor.value = val;
-                    setcolor();
-                }
-            },
-            bkgcol: (val) => {
-                if (backgcol && statusBox) {
-                    backgcol.value = val;
-                    backgcolz();
-                }
-            },
-            gradientSelect: (val) => {
-                if (gradientSelect) {
-                    gradientSelect.value = val;
-                    applyGradient();
-                }
-            },
-            statusText: (val) => {
-                if (statusText) {
-                    statusText.textContent = val;
-                }
-            },
-            logo: (val) => {
-                const image = document.getElementById("logo");
-                if (image && val) {
-                    image.setAttribute("src", val);
-                }
+                this.scheduleAutoSave();
+            });
+            grid.appendChild(swatch);
+        });
+        
+        document.getElementById('panelColorInput').addEventListener('input', (e) => {
+            if (target === 'text' && this.selectedLayer) {
+                this.selectedLayer.style.color = e.target.value;
+            } else if (target === 'shape' && this.selectedLayer) {
+                this.selectedLayer.style.background = e.target.value;
             }
+            this.scheduleAutoSave();
+        });
+    }
+    
+    showColorPickerPopup() {
+        const popup = document.getElementById('colorPickerPopup');
+        popup.style.display = 'block';
+        popup.style.top = '50%';
+        popup.style.left = '50%';
+        popup.style.transform = 'translate(-50%, -50%)';
+        
+        document.getElementById('customColorInput').addEventListener('input', (e) => {
+            this.brushColor = e.target.value;
+        });
+    }
+    
+    hideColorPickerPopup() {
+        document.getElementById('colorPickerPopup').style.display = 'none';
+    }
+    
+    // =============== TEXT TOOLS ===============
+    
+    openBoldnessSlider() {
+        if (!this.selectedLayer) return;
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Text Boldness';
+        
+        const currentWeight = parseInt(this.selectedLayer.style.fontWeight) || 400;
+        
+        content.innerHTML = `
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Weight</span>
+                    <span class="control-value" id="boldValue">${currentWeight}</span>
+                </div>
+                <input type="range" id="boldSlider" min="100" max="900" step="100" value="${currentWeight}">
+            </div>
+        `;
+        
+        this.openSlidePanel();
+        
+        document.getElementById('boldSlider').addEventListener('input', (e) => {
+            const val = e.target.value;
+            this.selectedLayer.style.fontWeight = val;
+            document.getElementById('boldValue').textContent = val;
+            this.scheduleAutoSave();
+        });
+    }
+    
+    openTextAlignPanel() {
+        if (!this.selectedLayer) return;
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Text Alignment';
+        
+        const aligns = ['left', 'center', 'right', 'justify'];
+        content.innerHTML = `
+            <div style="display:flex;gap:8px;">
+                ${aligns.map(a => `
+                    <button class="panel-btn" data-align="${a}" style="flex:1;">
+                        ${a.charAt(0).toUpperCase() + a.slice(1)}
+                    </button>
+                `).join('')}
+            </div>
+        `;
+        
+        this.openSlidePanel();
+        
+        content.querySelectorAll('.panel-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.selectedLayer.style.textAlign = btn.dataset.align;
+                this.closeSlidePanel();
+                this.scheduleAutoSave();
+            });
+        });
+    }
+    
+    openDropShadowPanel() {
+        if (!this.selectedLayer) return;
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Drop Shadow';
+        
+        content.innerHTML = `
+            <div class="control-group">
+                <div class="control-label"><span>Offset X</span><span class="control-value" id="shadowXVal">2px</span></div>
+                <input type="range" id="shadowX" min="0" max="20" value="2">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Offset Y</span><span class="control-value" id="shadowYVal">2px</span></div>
+                <input type="range" id="shadowY" min="0" max="20" value="2">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Blur</span><span class="control-value" id="shadowBlurVal">4px</span></div>
+                <input type="range" id="shadowBlur" min="0" max="30" value="4">
+            </div>
+            <div class="control-group">
+                <label>Shadow Color</label>
+                <input type="color" id="shadowColor" value="#000000" style="width:100%;height:40px;">
+            </div>
+            <button class="panel-btn primary" id="applyShadow" style="width:100%;margin-top:8px;">Apply Shadow</button>
+            <button class="panel-btn" id="removeShadow" style="width:100%;margin-top:4px;">Remove Shadow</button>
+        `;
+        
+        this.openSlidePanel();
+        
+        const updateShadow = () => {
+            const x = document.getElementById('shadowX').value;
+            const y = document.getElementById('shadowY').value;
+            const blur = document.getElementById('shadowBlur').value;
+            const color = document.getElementById('shadowColor').value;
+            this.selectedLayer.style.filter = `drop-shadow(${x}px ${y}px ${blur}px ${color})`;
+            document.getElementById('shadowXVal').textContent = x + 'px';
+            document.getElementById('shadowYVal').textContent = y + 'px';
+            document.getElementById('shadowBlurVal').textContent = blur + 'px';
         };
         
-        if (setters[key]) setters[key](value);
-    },
+        ['shadowX', 'shadowY', 'shadowBlur', 'shadowColor'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateShadow);
+        });
+        
+        document.getElementById('applyShadow').addEventListener('click', () => {
+            updateShadow();
+            this.saveState();
+            this.scheduleAutoSave();
+            this.closeSlidePanel();
+        });
+        
+        document.getElementById('removeShadow').addEventListener('click', () => {
+            this.selectedLayer.style.filter = 'none';
+            this.saveState();
+            this.scheduleAutoSave();
+            this.closeSlidePanel();
+        });
+    }
     
-    setTheme(theme) {
-        const themeLink = document.getElementById("theme");
-        const image = document.getElementById("logo");
-        const darkBtn = document.getElementById("darkModeToggle");
-        
-        if (themeLink && theme) {
-            themeLink.setAttribute("href", theme);
-            if (darkBtn) {
-                darkBtn.innerText = theme.includes('darkstyle') ? '☀️' : '🌙';
-            }
-            if (image) {
-                const logo = theme.includes('darkstyle') ? "darkthemeicon.png" : "lightthemeicon.png";
-                image.setAttribute("src", logo);
-            }
-        }
-    },
+    // =============== IMAGE ADJUSTMENTS ===============
     
-    bindEvents() {
-        // Font size
-        if (fontSize) {
-            fontSize.addEventListener('input', debounce(updateFontSize, CONFIG.DEBOUNCE_DELAY));
-        }
+    openImageAdjustPanel() {
+        if (!this.selectedLayer || this.selectedLayer.dataset.type !== 'image') return;
         
-        // Font weight
-        if (fontWeight) {
-            fontWeight.addEventListener('input', debounce(updateFontWeight, CONFIG.DEBOUNCE_DELAY));
-        }
+        const img = this.selectedLayer.querySelector('img');
+        if (!img) return;
         
-        // Dark theme toggle
-        const darkBtn = document.getElementById("darkModeToggle");
-        if (darkBtn) {
-            darkBtn.addEventListener("click", toggleTheme);
-        }
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Image Adjustments';
         
-        // Screen ratio
-        if (select) {
-            select.addEventListener('change', () => {
-                let [w,h] = select.value.split("x");
-                if (this.validateDimensions(parseInt(w), parseInt(h))) {
-                    statusBox.style.width = (w/4)+ "px";
-                    statusBox.style.height = (h/4) + "px";
-                    this.safeLocalStorageSet('screenratio', select.value);
+        const adjustments = [
+            { id: 'brightness', name: 'Brightness', min: 0, max: 200, value: 100, unit: '%' },
+            { id: 'contrast', name: 'Contrast', min: 0, max: 200, value: 100, unit: '%' },
+            { id: 'saturation', name: 'Saturation', min: 0, max: 200, value: 100, unit: '%' },
+            { id: 'hue', name: 'Hue Rotate', min: 0, max: 360, value: 0, unit: '°' },
+            { id: 'opacity', name: 'Opacity', min: 0, max: 100, value: 100, unit: '%' }
+        ];
+        
+        content.innerHTML = adjustments.map(adj => `
+            <div class="control-group">
+                <div class="control-label">
+                    <span>${adj.name}</span>
+                    <span class="control-value" id="${adj.id}Val">${adj.value}${adj.unit}</span>
+                </div>
+                <input type="range" id="${adj.id}Slider" min="${adj.min}" max="${adj.max}" value="${adj.value}">
+            </div>
+        `).join('') + `
+            <button class="panel-btn primary" id="applyAdjustments" style="width:100%;margin-top:8px;">Apply</button>
+            <button class="panel-btn" id="resetAdjustments" style="width:100%;margin-top:4px;">Reset</button>
+        `;
+        
+        this.openSlidePanel();
+        
+        const applyFilters = () => {
+            const brightness = document.getElementById('brightnessSlider').value;
+            const contrast = document.getElementById('contrastSlider').value;
+            const saturation = document.getElementById('saturationSlider').value;
+            const hue = document.getElementById('hueSlider').value;
+            const opacity = document.getElementById('opacitySlider').value;
+            
+            img.style.filter = `
+                brightness(${brightness}%)
+                contrast(${contrast}%)
+                saturate(${saturation}%)
+                hue-rotate(${hue}deg)
+            `;
+            this.selectedLayer.style.opacity = opacity / 100;
+            
+            document.getElementById('brightnessVal').textContent = brightness + '%';
+            document.getElementById('contrastVal').textContent = contrast + '%';
+            document.getElementById('saturationVal').textContent = saturation + '%';
+            document.getElementById('hueVal').textContent = hue + '°';
+            document.getElementById('opacityVal').textContent = opacity + '%';
+        };
+        
+        // Live preview
+        ['brightness', 'contrast', 'saturation', 'hue', 'opacity'].forEach(id => {
+            document.getElementById(id + 'Slider').addEventListener('input', applyFilters);
+        });
+        
+        document.getElementById('applyAdjustments').addEventListener('click', () => {
+            this.saveState();
+            this.scheduleAutoSave();
+            this.closeSlidePanel();
+        });
+        
+        document.getElementById('resetAdjustments').addEventListener('click', () => {
+            img.style.filter = 'none';
+            this.selectedLayer.style.opacity = '1';
+            this.saveState();
+            this.scheduleAutoSave();
+            this.closeSlidePanel();
+        });
+    }
+    
+    openImageFilterPanel() {
+        if (!this.selectedLayer || this.selectedLayer.dataset.type !== 'image') return;
+        
+        const img = this.selectedLayer.querySelector('img');
+        if (!img) return;
+        
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Filters';
+        
+        const filters = [
+            { name: 'Original', filter: 'none' },
+            { name: 'Grayscale', filter: 'grayscale(100%)' },
+            { name: 'Sepia', filter: 'sepia(100%)' },
+            { name: 'Vintage', filter: 'sepia(50%) contrast(80%) brightness(90%)' },
+            { name: 'Cool', filter: 'hue-rotate(180deg) saturate(80%)' },
+            { name: 'Warm', filter: 'saturate(150%) hue-rotate(-20deg)' },
+            { name: 'Dramatic', filter: 'contrast(150%) brightness(80%)' },
+            { name: 'Fade', filter: 'brightness(120%) saturate(70%) contrast(90%)' }
+        ];
+        
+        content.innerHTML = `
+            <div class="filter-grid">
+                ${filters.map((f, i) => `
+                    <div class="filter-item" data-filter="${f.filter}">
+                        <div style="background:#6366f1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;text-align:center;padding:4px;">
+                            ${f.name}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        this.openSlidePanel();
+        
+        content.querySelectorAll('.filter-item').forEach(item => {
+            item.addEventListener('click', () => {
+                img.style.filter = item.dataset.filter === 'none' ? '' : item.dataset.filter;
+                img.dataset.currentFilter = item.dataset.filter;
+                this.saveState();
+                this.scheduleAutoSave();
+                this.closeSlidePanel();
+            });
+        });
+    }
+    
+    // =============== SHAPE TOOLS ===============
+    
+    openShapeBorderPanel() {
+        if (!this.selectedLayer) return;
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Border';
+        
+        content.innerHTML = `
+            <div class="control-group">
+                <div class="control-label"><span>Width</span><span class="control-value" id="borderWidthVal">0px</span></div>
+                <input type="range" id="borderWidth" min="0" max="20" value="0">
+            </div>
+            <label>Border Color</label>
+            <input type="color" id="borderColor" value="#000000" style="width:100%;height:40px;">
+            <button class="panel-btn primary" id="applyBorder" style="width:100%;margin-top:8px;">Apply</button>
+        `;
+        
+        this.openSlidePanel();
+        
+        document.getElementById('borderWidth').addEventListener('input', (e) => {
+            document.getElementById('borderWidthVal').textContent = e.target.value + 'px';
+        });
+        
+        document.getElementById('applyBorder').addEventListener('click', () => {
+            const width = document.getElementById('borderWidth').value;
+            const color = document.getElementById('borderColor').value;
+            this.selectedLayer.style.border = `${width}px solid ${color}`;
+            this.saveState();
+            this.scheduleAutoSave();
+            this.closeSlidePanel();
+        });
+    }
+    
+    // =============== BACKGROUND ===============
+    
+    changeBackground() {
+        const content = document.getElementById('panelContent');
+        document.getElementById('panelTitle').textContent = 'Canvas Background';
+        
+        content.innerHTML = `
+            <div class="color-grid" id="bgColorGrid"></div>
+            <input type="color" id="bgColorInput" value="#ffffff" style="width:100%;height:40px;margin-top:8px;">
+            <button class="panel-btn" id="bgImageBtn" style="width:100%;margin-top:8px;">📷 Set Background Image</button>
+        `;
+        
+        this.openSlidePanel();
+        
+        const grid = document.getElementById('bgColorGrid');
+        this.colorPalette.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.classList.add('color-swatch');
+            swatch.style.backgroundColor = color;
+            swatch.addEventListener('click', () => {
+                this.canvas.style.background = color;
+                this.canvas.style.backgroundImage = 'none';
+                document.getElementById('bgColorInput').value = color;
+                this.scheduleAutoSave();
+            });
+            grid.appendChild(swatch);
+        });
+        
+        document.getElementById('bgColorInput').addEventListener('input', (e) => {
+            this.canvas.style.background = e.target.value;
+            this.canvas.style.backgroundImage = 'none';
+            this.scheduleAutoSave();
+        });
+        
+        document.getElementById('bgImageBtn').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        this.canvas.style.background = `url(${ev.target.result})`;
+                        this.canvas.style.backgroundSize = 'cover';
+                        this.canvas.style.backgroundPosition = 'center';
+                        this.scheduleAutoSave();
+                    };
+                    reader.readAsDataURL(file);
                 }
             });
-        }
-        
-        // Font family
-        const fontSelect = document.getElementById("fontSelect");
-        if (fontSelect) {
-            fontSelect.addEventListener("change", () => {
-                const selectedFont = fontSelect.value;
-                statusText.style.fontFamily = selectedFont;
-                this.safeLocalStorageSet('fontSelect', selectedFont);
-            });
-        }
-        
-        // Text color
-        if (txtcolor) {
-            txtcolor.addEventListener("input", debounce(() => {
-                setcolor();
-                this.safeLocalStorageSet('txtcolor', txtcolor.value);
-            }, CONFIG.DEBOUNCE_DELAY));
-        }
-        
-        // Background color
-        if (backgcol) {
-            backgcol.addEventListener('input', debounce(() => {
-                backgcolz();
-                this.safeLocalStorageSet('bkgcol', backgcol.value);
-            }, CONFIG.DEBOUNCE_DELAY));
-        }
-        
-        // Background image
-        if (backimg) {
-            backimg.addEventListener("change", backgImg);
-        }
-        
-        // Gradient
-        if (gradientSelect) {
-            gradientSelect.addEventListener("change", () => {
-                applyGradient();
-                this.safeLocalStorageSet('gradientSelect', gradientSelect.value);
-            });
-        }
-        
-        // Status text
-        if (statusText) {
-            statusText.addEventListener('input', debounce(() => {
-                const txt = (statusText.innerText || statusText.textContent || '').replace(/\u200B/g, '').trim();
-                this.safeLocalStorageSet('statusText', txt);
-            }, CONFIG.DEBOUNCE_DELAY));
-        }
-        
-        // Download button
-        const downloadBtn = document.getElementById("downloadBtn");
-        if (downloadBtn) {
-            downloadBtn.addEventListener("click", downloadImage);
-        }
-        
-        // Share button
-        const shareBtn = document.getElementById("copyBtn");
-        if (shareBtn) {
-            shareBtn.addEventListener("click", shareStatus);
-        }
-        
-        // Set default ratio
-        document.addEventListener('DOMContentLoaded', () => {
-            if (select && !localStorage.getItem('screenratio')) {
-                select.value = CONFIG.DEFAULT_RATIO;
-                select.dispatchEvent(new Event('change'));
-            }
+            input.click();
         });
-    },
+    }
     
-    enhanceAccessibility() {
-        const downloadBtn = document.getElementById('downloadBtn');
-        if (downloadBtn) {
-            downloadBtn.setAttribute('aria-label', 'Download status image');
-            downloadBtn.setAttribute('role', 'button');
-        }
+    // =============== EXPORT ===============
+    
+    async exportCanvas() {
+        this.stopBrushing();
+        this.deselectAllLayers();
         
-        const shareBtn = document.getElementById('copyBtn');
-        if (shareBtn) {
-            shareBtn.setAttribute('aria-label', 'Share status image');
-            shareBtn.setAttribute('role', 'button');
-        }
-        
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const popup = document.getElementById('downloadProgressPopup');
-                if (popup) hideDownloadProgressPopup();
-            }
-        });
-    },
-    
-    validateDimensions(width, height) {
-        return width > 0 && height > 0 && width <= CONFIG.MAX_DIMENSION && height <= CONFIG.MAX_DIMENSION;
-    },
-    
-    safeLocalStorageSet(key, value) {
         try {
-            localStorage.setItem(key, value);
-            return true;
-        } catch (e) {
-            console.warn('LocalStorage quota exceeded:', e);
-            this.showStorageError();
-            return false;
-        }
-    },
-    
-    showStorageError() {
-        const existingError = document.getElementById('storageError');
-        if (existingError) return;
-        
-        const errorDiv = document.createElement('div');
-        errorDiv.id = 'storageError';
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: #ff4444;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 10000;
-        `;
-        errorDiv.textContent = 'Storage full - settings not saved';
-        document.body.appendChild(errorDiv);
-        
-        setTimeout(() => {
-            if (errorDiv.parentNode) {
-                errorDiv.parentNode.removeChild(errorDiv);
-            }
-        }, 3000);
-    },
-    
-    loadSharedStatus() {
-        // Implementation for loading shared status
-        console.log('Load shared status functionality');
-    }
-};
-
-// Utility Functions
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-function setLoadingState(element, isLoading) {
-    if (isLoading) {
-        element.disabled = true;
-        element.dataset.originalText = element.textContent;
-        element.textContent = 'Loading...';
-    } else {
-        element.disabled = false;
-        element.textContent = element.dataset.originalText;
-    }
-}
-
-function cleanupBackgroundImage() {
-    const currentBg = statusBox.style.backgroundImage;
-    if (currentBg.includes('blob:')) {
-        try {
-            URL.revokeObjectURL(currentBg.replace('url("', '').replace('")', ''));
-        } catch (e) {
-            console.warn('Error cleaning up blob URL:', e);
-        }
-    }
-}
-
-// Core Functionality
-function updateFontSize() {
-    if (!fontSize || !statusText) return;
-    
-    const size = fontSize.value + 'px';
-    statusText.style.fontSize = size;
-    StatusManager.safeLocalStorageSet('fontSize', fontSize.value);
-}
-
-function updateFontWeight() {
-    if (!fontWeight || !statusText) return;
-    
-    const weight = fontWeight.value;
-    statusText.style.fontWeight = Number(weight);
-    StatusManager.safeLocalStorageSet('fontWeight', weight);
-}
-
-function toggleTheme() {
-    const themeLink = document.getElementById("theme");
-    const image = document.getElementById("logo");
-    const btn = document.getElementById("darkModeToggle");
-    
-    if (!themeLink || !image || !btn) return;
-    
-    const currentTheme = themeLink.getAttribute("href");
-    
-    if (currentTheme === "lightstyle.css") {
-        themeLink.setAttribute("href", "darkstyle.css");
-        image.setAttribute("src", "darkthemeicon.png");
-        btn.innerText = "☀️";
-    } else {
-        themeLink.setAttribute("href", "lightstyle.css");
-        image.setAttribute("src", "lightthemeicon.png");
-        btn.innerText = "🌙";
-    }
-    
-    // Save theme state
-    StatusManager.safeLocalStorageSet('logo', image.getAttribute("src"));
-    StatusManager.safeLocalStorageSet('theme', themeLink.getAttribute("href"));
-}
-
-function setcolor() {
-    if (!statusText || !txtcolor) return;
-    
-    statusText.style.color = txtcolor.value;
-    const txtcolz = document.getElementById("txtcolz");
-    if (txtcolz) {
-        txtcolz.style.backgroundColor = txtcolor.value;
-    }
-}
-
-function backgcolz() {
-    if (!statusBox || !backgcol) return;
-    
-    statusBox.style.backgroundColor = backgcol.value;
-    statusBox.style.backgroundImage = "none";
-    const bckgcolz = document.getElementById("bckgcolz");
-    if (bckgcolz) {
-        bckgcolz.style.backgroundColor = backgcol.value;
-    }
-}
-
-function backgImg() {
-    cleanupBackgroundImage();
-    
-    const file = backimg.files[0];
-    statusBox.style.backgroundColor = "transparent";
-    
-    if (!file) return;
-
-    // Check file size
-    if (file.size > CONFIG.MAX_IMAGE_SIZE) {
-        alert('Please select an image smaller than 5MB');
-        backimg.value = '';
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function () {
-        statusBox.style.backgroundImage = `url("${reader.result}")`;
-        statusBox.style.backgroundSize = 'cover';
-        statusBox.style.backgroundPosition = 'center';
-        statusBox.style.backgroundRepeat = 'no-repeat';
-        
-        // Save to localStorage
-        try {
-            StatusManager.safeLocalStorageSet('bgImageData', reader.result);
-        } catch (e) {
-            console.warn('Could not save image to localStorage (file too large).', e);
-        }
-    };
-    reader.onerror = function () {
-        alert('Error reading file. Please try another image.');
-    };
-    reader.readAsDataURL(file);
-}
-
-function applyGradient() {
-    if (!statusBox || !gradientSelect || !backgcol || !txtcolor) return;
-    
-    const selectedGradient = gradientSelect.value;
-    if (selectedGradient === "none") {
-        statusBox.style.backgroundImage = "none";
-    } else if (selectedGradient === "radial") {
-        statusBox.style.backgroundImage = `radial-gradient(circle, ${backgcol.value}, ${txtcolor.value})`;
-    } else {
-        statusBox.style.backgroundImage = `linear-gradient(${selectedGradient}, ${backgcol.value}, ${txtcolor.value})`;
-    }
-}
-
-// FIXED CLONE CREATION FUNCTION - CONSISTENT BETWEEN DOWNLOAD AND SHARE
-function createHighQualityClone() {
-    const [wStr, hStr] = (select.value || CONFIG.DEFAULT_RATIO).split("x");
-    const targetW = parseInt(wStr, 10);
-    const targetH = parseInt(hStr, 10);
-    
-    if (!StatusManager.validateDimensions(targetW, targetH)) {
-        throw new Error('Invalid dimensions selected');
-    }
-
-    // Create clone
-    const clone = statusBox.cloneNode(true);
-    
-    // Get original dimensions and calculate proper scale factor
-    const originalWidth = statusBox.offsetWidth;
-    const originalHeight = statusBox.offsetHeight;
-    const scaleFactor = targetW / originalWidth;
-
-    // Get computed styles from original
-    const originalStyles = window.getComputedStyle(statusBox);
-
-    // Apply scaled container styles - NO FILTERS
-    clone.style.cssText = `
-        width: ${targetW}px;
-        height: ${targetH}px;
-        min-width: ${targetW}px;
-        min-height: ${targetH}px;
-        max-width: ${targetW}px;
-        max-height: ${targetH}px;
-        position: absolute;
-        left: 0;
-        top: 0;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        background-image: ${originalStyles.backgroundImage};
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-color: ${originalStyles.backgroundColor};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        image-rendering: crisp-edges;
-        filter: none !important;
-        -webkit-filter: none !important;
-    `;
-
-    // Scale text properly
-    const cloneText = clone.querySelector('.editable-text');
-    if (cloneText) {
-        const textStyles = window.getComputedStyle(statusText);
-        
-        // Scale all text properties proportionally - NO FILTERS
-        cloneText.style.cssText = `
-            font-size: ${parseFloat(textStyles.fontSize) * scaleFactor}px;
-            font-weight: ${textStyles.fontWeight};
-            line-height: ${parseFloat(textStyles.lineHeight) * scaleFactor}px;
-            text-align: center;
-            color: ${textStyles.color};
-            font-family: ${textStyles.fontFamily};
-            width: 100%;
-            padding: ${20 * scaleFactor}px;
-            margin: 0;
-            box-sizing: border-box;
-            word-wrap: break-word;
-            white-space: pre-wrap;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 0;
-            position: relative;
-            transform: none;
-            left: auto;
-            top: auto;
-            right: auto;
-            bottom: auto;
-            filter: none !important;
-            -webkit-filter: none !important;
-        `;
-
-        cloneText.innerHTML = statusText.innerHTML;
-    }
-
-    return { clone, targetW, targetH };
-}
-
-// Image Import Functionality 
-function getImage() {
-    // Check internet connection first
-    if (!navigator.onLine) {
-        showNoInternetPopup();
-        return;
-    }
-    
-    const [width, height] = (select.value || CONFIG.DEFAULT_RATIO).split("x");
-    if (!StatusManager.validateDimensions(parseInt(width), parseInt(height))) {
-        alert('Invalid dimensions selected');
-        return;
-    }
-    
-    const url = `https://picsum.photos/${width}/${height}?${Date.now()}`;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    
-    setLoadingState(document.getElementById('importBtn'), true);
-    
-    img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0);
-        try {
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            statusBox.style.backgroundImage = `url("${dataUrl}")`;
-            statusBox.style.backgroundSize = 'cover';
-            statusBox.style.backgroundPosition = 'center';
-            statusBox.style.backgroundRepeat = 'no-repeat';
-            StatusManager.safeLocalStorageSet('bgImageData', dataUrl);
-        } catch (e) {
-            // Fallback to direct URL
-            statusBox.style.backgroundImage = `url("${url}")`;
-            statusBox.style.backgroundSize = 'cover';
-            statusBox.style.backgroundPosition = 'center';
-            statusBox.style.backgroundRepeat = 'no-repeat';
-        } finally {
-            setLoadingState(document.getElementById('importBtn'), false);
-        }
-    };
-    
-    img.onerror = () => {
-        alert('Failed to load image. Please try again.');
-        setLoadingState(document.getElementById('importBtn'), false);
-    };
-    
-    img.src = url;
-}
-
-// Popup Functions
-function showDownloadProgressPopup() {
-    const popup = document.createElement('div');
-    popup.id = 'downloadProgressPopup';
-    popup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(0, 0, 0, 0.9);
-        color: white;
-        padding: 30px;
-        border-radius: 15px;
-        z-index: 10000;
-        text-align: center;
-        min-width: 300px;
-        box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-    `;
-    
-    popup.innerHTML = `
-        <h3 style="margin-bottom: 20px; color: #25D366;">Stay chill 😌 🔄 Generating Your Status</h3>
-        <div style="margin-bottom: 20px;">
-            <div style="width: 100%; background-color: #333; border-radius: 10px; overflow: hidden;">
-                <div id="progressBar" style="height: 8px; background-color: #25D366; width: 0%; transition: width 0.3s;"></div>
-            </div>
-            <p id="progressText" style="margin-top: 10px; font-size: 14px;">Preparing image...Do the calms 🙃</p>
-        </div>
-        <button id="hidePopupBtn" style="background: #666; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 12px;">
-            Hide (download will continue)
-        </button>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    // Add hide functionality
-    document.getElementById('hidePopupBtn').addEventListener('click', function() {
-        popup.style.display = 'none'; 
-    });
-    
-    return popup;
-}
-
-function updateDownloadProgress(percentage, message) {
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    
-    if (progressBar) {
-        progressBar.style.width = percentage + '%';
-    }
-    if (progressText) {
-        progressText.textContent = message;
-    }
-}
-
-function hideDownloadProgressPopup() {
-    const popup = document.getElementById('downloadProgressPopup');
-    if (popup && popup.parentNode) {
-        popup.parentNode.removeChild(popup);
-    }
-}
-
-function showNoInternetPopup() {
-    const popup = document.createElement('div');
-    popup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(0, 0, 0, 0.9);
-        color: white;
-        padding: 30px;
-        border-radius: 15px;
-        z-index: 10000;
-        text-align: center;
-        min-width: 300px;
-        box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
-    `;
-    
-    popup.innerHTML = `
-        <h3 style="margin-bottom: 20px; color: #ff4444;">🌐 No Internet Connection</h3>
-        <p style="margin-bottom: 20px;">Please check your internet connection and try again.</p>
-        <button onclick="this.parentElement.remove()" style="background: #ff4444; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
-            OK
-        </button>
-    `;
-    
-    document.body.appendChild(popup);
-}
-
-// Download Functionality - FIXED TO USE CONSISTENT STYLING
-// Download Recommendation Popup Function
-function showDownloadRecommendationPopup() {
-    return new Promise((resolve) => {
-        const popup = document.createElement('div');
-        popup.id = 'downloadRecommendationPopup';
-        popup.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.95);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            z-index: 10001;
-            text-align: center;
-            min-width: 350px;
-            max-width: 90vw;
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
-            font-family: Arial, sans-serif;
-            backdrop-filter: blur(10px);
-        `;
-        
-        popup.innerHTML = `
-            <h3 style="margin-bottom: 20px; color: #25D366;">📱 Recommendation</h3>
-            <div style="margin-bottom: 25px;">
-                <p style="margin-bottom: 15px; font-size: 16px; line-height: 1.5;">
-                    <strong>We recommend sharing instead of downloading!</strong>
-                </p>
-                <p style="margin-bottom: 10px; font-size: 14px; color: #ccc;">
-                    ⚠️ Downloaded images may appear darker depending on device 
-                </p>
-                <p style="margin-bottom: 10px; font-size: 14px; color: #ccc;">
-                    ✅ Shared images maintain original brightness and quality
-                </p>
-            </div>
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <button id="shareInsteadBtn" style="background: #25D366; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; flex: 1;">
-                    Share Instead
-                </button>
-                <button id="downloadAnywayBtn" style="background: #007bff; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; flex: 1;">
-                    Download Anyway
-                </button>
-            </div>
-            <div style="margin-top: 15px;">
-                <button id="cancelDownloadBtn" style="background: transparent; color: #ccc; border: 1px solid #666; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 12px;">
-                    Cancel
-                </button>
-            </div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        // Add event handlers
-        document.getElementById('shareInsteadBtn').addEventListener('click', () => {
-            popup.remove();
-            // Trigger share function instead
-            const shareBtn = document.getElementById("copyBtn");
-            if (shareBtn) {
-                shareBtn.click();
-            }
-            resolve(false);
-        });
-        
-        document.getElementById('downloadAnywayBtn').addEventListener('click', () => {
-            popup.remove();
-            resolve(true); // Proceed with download
-        });
-        
-        document.getElementById('cancelDownloadBtn').addEventListener('click', () => {
-            popup.remove();
-            resolve(false); // Cancel download
-        });
-        
-        // Close on escape key
-        const closeOnEscape = (e) => {
-            if (e.key === 'Escape') {
-                popup.remove();
-                document.removeEventListener('keydown', closeOnEscape);
-                resolve(false);
-            }
-        };
-        document.addEventListener('keydown', closeOnEscape);
-        
-        // Close on background click
-        popup.addEventListener('click', (e) => {
-            if (e.target === popup) {
-                popup.remove();
-                document.removeEventListener('keydown', closeOnEscape);
-                resolve(false);
-            }
-        });
-    });
-}
-
-// Updated Download Functionality
-function downloadImage() {
-    showDownloadRecommendationPopup().then(proceedWithDownload => {
-        if (!proceedWithDownload) {
-            return; // User chose to share instead or cancel
-        }
-        
-        // Check internet connection for web images
-        const computedStyle = window.getComputedStyle(statusBox);
-        if (computedStyle.backgroundImage.includes('url("http') && !navigator.onLine) {
-            showNoInternetPopup();
-            return;
-        }
-
-        const downloadBtn = document.getElementById('downloadBtn');
-        if (!downloadBtn) return;
-        
-        setLoadingState(downloadBtn, true);
-
-        try {
-            // Use shared clone creation
-            const { clone, targetW, targetH } = createHighQualityClone();
-
-            // Show progress popup
-            const progressPopup = showDownloadProgressPopup();
-            updateDownloadProgress(10, 'Initializing download...');
-
-            // Create temporary container
-            const container = document.createElement('div');
-            container.style.position = 'fixed';
-            container.style.left = '-9999px';
-            container.style.top = '0';
-            container.style.width = targetW + 'px';
-            container.style.height = targetH + 'px';
-            container.style.overflow = 'hidden';
-            container.style.border = "none";
-            container.style.boxShadow = "none";
-            container.style.filter = "none";
-            container.appendChild(clone);
-            document.body.appendChild(container);
-
-            updateDownloadProgress(40, 'Rendering image...');
-
-            // Use dom-to-image with consistent options
-            setTimeout(() => {
-                updateDownloadProgress(70, 'Finalizing quality...');
-                
-                domtoimage.toJpeg(clone, {
-                    width: targetW,
-                    height: targetH,
-                    quality: CONFIG.QUALITY,
-                    bgcolor: window.getComputedStyle(statusBox).backgroundColor,
-                    style: {
-                        'transform': 'none',
-                        'width': targetW + 'px',
-                        'height': targetH + 'px',
-                        'margin': '0',
-                        'padding': '0',
-                        'filter': 'none',
-                        '-webkit-filter': 'none'
-                    },
-                    filter: function(node) {
-                        // Remove all filters from all elements
-                        if (node.style) {
-                            node.style.filter = 'none';
-                            node.style.webkitFilter = 'none';
-                        }
-                        return true;
-                    }
-                }).then(function(dataUrl) {
-                    if (container.parentNode) {
-                        document.body.removeChild(container);
-                    }
-                    
-                    const link = document.createElement('a');
-                    link.download = `whatsapp-status-${targetW}x${targetH}-${Date.now()}.jpeg`;
-                    link.href = dataUrl;
-                    link.click();
-
-                    updateDownloadProgress(100, 'Image rendered, download will begin now');
-                    
-                    setTimeout(() => {
-                        hideDownloadProgressPopup();
-                        setLoadingState(downloadBtn, false);
-                    }, 1000);
-                    
-                }).catch(function(error) {
-                    if (container.parentNode) {
-                        document.body.removeChild(container);
-                    }
-                    hideDownloadProgressPopup();
-                    console.error('dom-to-image error:', error);
-                    alert('Failed to generate image. Please try again.');
-                    setLoadingState(downloadBtn, false);
+            if (typeof domtoimage !== 'undefined') {
+                const dataUrl = await domtoimage.toJpeg(this.canvas, {
+                    quality: 0.95,
+                    bgcolor: this.canvas.style.background || '#ffffff'
                 });
-            }, 300);
-
-        } catch (error) {
-            console.error('Download failed:', error);
-            alert('Failed to create image. Please try again.');
-            setLoadingState(downloadBtn, false);
-        }
-    });
-}
-
-// Share Functionality - FIXED TO USE CONSISTENT STYLING
-async function shareStatus() {
-    try {
-        const shareBtn = document.getElementById("copyBtn");
-        setLoadingState(shareBtn, true);
-
-        // Use shared clone creation
-        const { clone, targetW, targetH } = createHighQualityClone();
-
-        // Create high-quality image for sharing using the SAME options as download
-        const dataUrl = await domtoimage.toJpeg(clone, {
-            width: targetW,
-            height: targetH,
-            quality: CONFIG.QUALITY,
-            style: {
-                'transform': 'none',
-                'width': targetW + 'px',
-                'height': targetH + 'px',
-                'margin': '0',
-                'padding': '0',
-                'filter': 'none',
-                '-webkit-filter': 'none'
-            },
-            filter: function(node) {
-                // Remove all filters from all elements
-                if (node.style) {
-                    node.style.filter = 'none';
-                    node.style.webkitFilter = 'none';
-                }
-                return true;
-            }
-        });
-        
-        // Convert data URL to blob
-        const response = await fetch(dataUrl);
-        const blob = await response.blob();
-        const file = new File([blob], 'whatsapp-status.jpg', { type: 'image/jpeg' });
-        
-        // Enhanced platform detection and sharing
-        //await handleSharing(file, dataUrl, blob);
-        //shareImageMobile(dataUrl, blob)
-         if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        await shareImageMobile(dataUrl, blob);
-    } else {
-        // Desktop fallback
-        await handleSharing(file, dataUrl, blob);
-    }
-        
-    } catch (error) {
-        console.error('Share failed:', error);
-        alert('Sharing failed. You can download the image instead.');
-    } finally {
-        const shareBtn = document.getElementById("copyBtn");
-        setLoadingState(shareBtn, false);
-    }
-}
-
-async function handleSharing(file, dataUrl, blob) {
-    // Check if Web Share API is available and can share files
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-            await navigator.share({
-                files: [file],
-                title: 'WhatsApp Status',
-                text: 'Check out my status!'
-            });
-            return;
-        } catch (shareError) {
-            console.log('Web Share failed, falling back to alternative methods:', shareError);
-            await handleSharing(file, dataUrl, blob)
-        }
-    }
-    
-    // For mobile apps - use proper image sharing
-    if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        await shareImageMobile(dataUrl, blob);
-    } else {
-        // Desktop fallback
-        await showSharingOptions(file, dataUrl, blob);
-    }
-}
-
-// MOBILE IMAGE SHARING
-async function shareImageMobile(dataUrl, blob) {
-    const sharePopup = document.createElement('div');
-    sharePopup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.95);
-        color: white;
-        padding: 25px;
-        border-radius: 15px;
-        z-index: 10000;
-        text-align: center;
-        min-width: 300px;
-        backdrop-filter: blur(10px);
-    `;
-    
-    sharePopup.innerHTML = `
-        <h3 style="margin-bottom: 20px; color: #25D366;">Share Image</h3>
-        <p style="margin-bottom: 20px;">Choose how to share your status image:</p>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <button id="shareNative" style="background: #25D366; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px; display: none;">
-                📱 Share via App
-            </button>
-            <button id="shareWhatsApp" style="background: #25D366; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px;">
-                💚 Share Status
-            </button>
-            <button id="downloadMobile" style="background: #007bff; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px;">
-                💾 Download Image
-            </button>
-            <button id="cancelMobile" style="background: #666; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px;">
-                Cancel
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(sharePopup);
-    
-    // Share via native app picker
-    document.getElementById('shareNative').addEventListener('click', async () => {
-        try {
-            // Create a temporary file URL for sharing
-            const fileUrl = URL.createObjectURL(blob);
-            
-            // For mobile devices, create a download link and trigger share
-            const link = document.createElement('a');
-            link.href = fileUrl;
-            link.download = 'whatsapp-status.jpg';
-            link.click();
-            
-            showTemporaryMessage('✅ Image saved! You can now share it from your gallery');
-            
-        } catch (error) {
-            console.error('Native share failed:', error);
-            shareImageFallback(dataUrl);
-        }
-        sharePopup.remove();
-    });
-    
-    // Share to WhatsApp specifically
-    document.getElementById('shareWhatsApp').addEventListener('click', () => {
-        shareToWhatsAppDirect(blob, dataUrl);
-        sharePopup.remove();
-    });
-    
-    // Download
-    document.getElementById('downloadMobile').addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = `whatsapp-status-${Date.now()}.jpg`;
-        link.href = dataUrl;
-        link.click();
-        sharePopup.remove();
-    });
-    
-    document.getElementById('cancelMobile').addEventListener('click', () => {
-        sharePopup.remove();
-    });
-}
-
-// DIRECT WHATSAPP SHARING
-function shareToWhatsAppDirect(blob, dataUrl) {
-    // Create a temporary file
-    const file = new File([blob], 'status.jpg', { type: 'image/jpeg' });
-    
-    if (navigator.share && navigator.canShare({ files: [file] })) {
-        // Use Web Share API for WhatsApp
-        navigator.share({
-            files: [file],
-            title: 'WhatsApp Status',
-            text: 'My WhatsApp Status'
-        }).catch(error => {
-            console.log('Web Share failed, trying fallback:', error);
-            shareToWhatsAppFallback(dataUrl);
-        });
-    } else {
-        // Fallback for older browsers
-        shareToWhatsAppFallback(dataUrl);
-    }
-}
-
-function shareToWhatsAppFallback(dataUrl) {
-    // Convert data URL to blob URL for sharing
-    const byteString = atob(dataUrl.split(',')[1]);
-    const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    
-    for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-    }
-    
-    const blob = new Blob([ab], { type: mimeString });
-    const blobUrl = URL.createObjectURL(blob);
-    
-    // Open WhatsApp with the image
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent('Check out my status!')}`;
-    window.open(whatsappUrl, '_blank');
-    
-    showTemporaryMessage('📱 Open WhatsApp and attach the image from your downloads');
-}
-
-// DESKTOP SHARING - IMPROVED
-async function showSharingOptions(file, dataUrl, blob) {
-    const sharePopup = document.createElement('div');
-    sharePopup.id = 'shareOptionsPopup';
-    sharePopup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(0, 0, 0, 0.95);
-        color: white;
-        padding: 30px;
-        border-radius: 15px;
-        z-index: 10000;
-        text-align: center;
-        min-width: 400px;
-        max-width: 90vw;
-        box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
-        font-family: Arial, sans-serif;
-        backdrop-filter: blur(10px);
-    `;
-    
-    sharePopup.innerHTML = `
-        <h3 style="margin-bottom: 25px; color: #25D366; font-size: 1.4em;">Share Your Status Image</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
-            <button id="downloadShareBtn" class="share-option-btn" data-action="download">
-                <span style="font-size: 1.5em;">💾</span>
-                <span>Download Image</span>
-            </button>
-            <button id="clipboardShareBtn" class="share-option-btn" data-action="clipboard">
-                <span style="font-size: 1.5em;">📋</span>
-                <span>Copy Image</span>
-            </button>
-            <button id="dragShareBtn" class="share-option-btn" data-action="drag">
-                <span style="font-size: 1.5em;">🖱️</span>
-                <span>Drag & Drop</span>
-            </button>
-        </div>
-        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #444;">
-            <button id="closeSharePopup" style="background: #666; color: white; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: background 0.3s;">
-                Cancel
-            </button>
-        </div>
-    `;
-    
-    // Add CSS for share buttons
-    const style = document.createElement('style');
-    style.textContent = `
-        .share-option-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 20px 15px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            min-height: 80px;
-            justify-content: center;
-        }
-        .share-option-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        }
-        .share-option-btn:active {
-            transform: translateY(0);
-        }
-        #closeSharePopup:hover {
-            background: #888 !important;
-        }
-    `;
-    document.head.appendChild(style);
-    
-    document.body.appendChild(sharePopup);
-    
-    // Button event handlers
-    document.getElementById('downloadShareBtn').addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = `whatsapp-status-${Date.now()}.jpg`;
-        link.href = dataUrl;
-        link.click();
-        showTemporaryMessage('✅ Image downloaded! view in Gallery');
-        sharePopup.remove();
-        style.remove();
-    });
-    
-    document.getElementById('clipboardShareBtn').addEventListener('click', async () => {
-        try {
-            if (navigator.clipboard && window.ClipboardItem) {
-                await navigator.clipboard.write([
-                    new ClipboardItem({ 'image/jpeg': blob })
-                ]);
-                showTemporaryMessage('✅ Image copied to clipboard! You can paste it anywhere');
+                this.downloadImage(dataUrl);
             } else {
-                throw new Error('Clipboard API not supported');
+                this.showToast('Add dom-to-image library for export');
             }
         } catch (error) {
-            console.error('Clipboard copy failed:', error);
-            showTemporaryMessage('❌ Copy failed. Please download the image instead.');
+            console.error('Export failed:', error);
+            this.showToast('Export failed');
         }
-    });
+    }
     
-    /*document.getElementById('previewShareBtn').addEventListener('click', () => {
-        openImagePreview(dataUrl);
-        sharePopup.remove();
-        style.remove();
-    });*/
+    downloadImage(dataUrl) {
+        const link = document.createElement('a');
+        link.download = `statsnap-${Date.now()}.jpg`;
+        link.href = dataUrl;
+        link.click();
+        this.showToast('✅ Downloaded!');
+    }
     
-    document.getElementById('dragShareBtn').addEventListener('click', () => {
-        createDraggableImage(dataUrl, blob);
-        sharePopup.remove();
-        style.remove();
-    });
+    // =============== UNDO/REDO ===============
     
-    document.getElementById('closeSharePopup').addEventListener('click', () => {
-        sharePopup.remove();
-        style.remove();
-    });
-    
-    // Close handlers
-    const closeOnEscape = (e) => {
-        if (e.key === 'Escape') {
-            sharePopup.remove();
-            style.remove();
-            document.removeEventListener('keydown', closeOnEscape);
+    saveState() {
+        const state = this.serializeProject();
+        this.undoStack.push(state);
+        if (this.undoStack.length > this.maxHistorySize) {
+            this.undoStack.shift();
         }
-    };
-    document.addEventListener('keydown', closeOnEscape);
+        this.redoStack = [];
+        this.updateUndoRedoButtons();
+    }
     
-    sharePopup.addEventListener('click', (e) => {
-        if (e.target === sharePopup) {
-            sharePopup.remove();
-            style.remove();
-            document.removeEventListener('keydown', closeOnEscape);
-        }
-    });
-}
-
-// CREATE DRAGGABLE IMAGE FOR DESKTOP SHARING
-function createDraggableImage(dataUrl, blob) {
-    const dragImage = document.createElement('div');
-    dragImage.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 10001;
-        cursor: grab;
-        border: 3px dashed #25D366;
-        border-radius: 10px;
-        padding: 10px;
-        background: white;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    `;
+    undo() {
+        if (this.undoStack.length === 0) return;
+        const currentState = this.serializeProject();
+        this.redoStack.push(currentState);
+        const previousState = this.undoStack.pop();
+        this.restoreProject(previousState);
+        this.updateUndoRedoButtons();
+        this.scheduleAutoSave();
+        this.showToast('Undo');
+    }
     
-    const img = document.createElement('img');
-    img.src = dataUrl;
-    img.style.cssText = `
-        max-width: 300px;
-        max-height: 300px;
-        display: block;
-        border-radius: 5px;
-    `;
+    redo() {
+        if (this.redoStack.length === 0) return;
+        const currentState = this.serializeProject();
+        this.undoStack.push(currentState);
+        const nextState = this.redoStack.pop();
+        this.restoreProject(nextState);
+        this.updateUndoRedoButtons();
+        this.scheduleAutoSave();
+        this.showToast('Redo');
+    }
     
-    const instruction = document.createElement('div');
-    instruction.style.cssText = `
-        text-align: center;
-        color: #333;
-        margin-top: 10px;
-        font-weight: bold;
-    `;
-    instruction.textContent = 'Drag this image to any app or folder';
+    updateUndoRedoButtons() {
+        document.getElementById('undoBtn').disabled = this.undoStack.length === 0;
+        document.getElementById('redoBtn').disabled = this.redoStack.length === 0;
+    }
     
-    dragImage.appendChild(img);
-    dragImage.appendChild(instruction);
-    document.body.appendChild(dragImage);
+    // =============== PERSISTENCE ===============
     
-    // Make image draggable
-    dragImage.draggable = true;
+    async initDatabase() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('statsnap-projects', 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => { this.db = request.result; resolve(); };
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('projects')) {
+                    db.createObjectStore('projects', { keyPath: 'id' });
+                }
+            };
+        });
+    }
     
-    dragImage.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', dataUrl);
-        e.dataTransfer.setData('text/uri-list', dataUrl);
-        e.dataTransfer.effectAllowed = 'copy';
+    async saveProject() {
+        if (!this.db) return;
+        const project = this.serializeProject();
+        const transaction = this.db.transaction(['projects'], 'readwrite');
+        const store = transaction.objectStore('projects');
+        await store.put({ id: 'current-project', data: project, timestamp: Date.now() });
+    }
+    
+    scheduleAutoSave() {
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => this.saveProject(), 3000);
+    }
+    
+    startAutoSave() {
+        this.autoSaveInterval = setInterval(() => this.saveProject(), 30000);
+    }
+    
+    async loadProject() {
+        if (!this.db) return;
+        const transaction = this.db.transaction(['projects'], 'readonly');
+        const store = transaction.objectStore('projects');
+        const request = store.get('current-project');
+        request.onsuccess = () => {
+            if (request.result) this.restoreProject(request.result.data);
+        };
+    }
+    
+    serializeProject() {
+        return {
+            layers: this.layers.map(layer => ({
+                id: layer.id,
+                type: layer.dataset.type,
+                html: layer.innerHTML,
+                style: layer.getAttribute('style') || '',
+                rotation: layer.dataset.rotation || '0',
+                zIndex: layer.style.zIndex
+            })),
+            canvasStyle: this.canvas.getAttribute('style') || '',
+            mode: this.currentMode,
+            version: '2.0'
+        };
+    }
+    
+    restoreProject(data) {
+        this.canvas.innerHTML = '';
+        this.layers = [];
         
-        // Create a drag image
-        const dragImg = new Image();
-        dragImg.src = dataUrl;
-        e.dataTransfer.setDragImage(dragImg, 0, 0);
-    });
-    
-    dragImage.addEventListener('click', () => {
-        dragImage.remove();
-    });
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        if (dragImage.parentNode) {
-            dragImage.remove();
+        if (data.canvasStyle) this.canvas.setAttribute('style', data.canvasStyle);
+        if (data.mode) this.switchMode(data.mode);
+        
+        if (data.layers) {
+            data.layers.forEach(ld => {
+                const layer = document.createElement('div');
+                layer.id = ld.id;
+                layer.classList.add('layer');
+                layer.dataset.type = ld.type;
+                layer.dataset.rotation = ld.rotation;
+                layer.innerHTML = ld.html;
+                layer.setAttribute('style', ld.style);
+                
+                this.addResizeHandles(layer);
+                this.addRotateHandle(layer);
+                this.setupDragHandlers(layer);
+                
+                layer.addEventListener('pointerdown', (e) => {
+                    if (this.isBrushing) return;
+                    e.stopPropagation();
+                    this.selectLayer(layer);
+                });
+                
+                if (ld.type === 'text') {
+                    layer.setAttribute('contenteditable', 'true');
+                    layer.addEventListener('dblclick', () => layer.focus());
+                    layer.addEventListener('input', () => this.scheduleAutoSave());
+                }
+                
+                this.canvas.appendChild(layer);
+                this.layers.push(layer);
+                this.layerIdCounter = Math.max(this.layerIdCounter, parseInt(ld.id.split('-')[1]) || 0);
+            });
         }
-    }, 10000);
+        
+        this.updateEmptyState();
+        this.updateContextualTools();
+    }
+    
+    // =============== UTILITIES ===============
+    
+    showToast(message) {
+        const existing = document.querySelector('.toast');
+        if (existing) existing.remove();
+        
+        const toast = document.createElement('div');
+        toast.classList.add('toast');
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2500);
+    }
+    
+    destroy() {
+        clearInterval(this.autoSaveInterval);
+        clearTimeout(this.saveTimeout);
+        if (this.db) this.db.close();
+    }
 }
 
-// Utility function to show temporary messages
-function showTemporaryMessage(message, parentElement = document.body) {
-    const messageDiv = document.createElement('div');
-    messageDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #25D366;
-        color: white;
-        padding: 15px 25px;
-        border-radius: 8px;
-        z-index: 10001;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        font-weight: bold;
-    `;
-    messageDiv.textContent = message;
-    
-    parentElement.appendChild(messageDiv);
-    
-    setTimeout(() => {
-        if (messageDiv.parentNode) {
-            messageDiv.parentNode.removeChild(messageDiv);
-        }
-    }, 3000);
-}
+// Initialize
+let editor;
+document.addEventListener('DOMContentLoaded', () => {
+    editor = new StatsnapEditor();
+});
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    StatusManager.init();
+window.addEventListener('beforeunload', () => {
+    if (editor) {
+        editor.saveProject();
+        editor.destroy();
+    }
 });
