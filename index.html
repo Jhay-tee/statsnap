@@ -2,162 +2,248 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Statsnap - Professional Creative Editor</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
 </head>
 <body>
     <!-- Top Navigation Bar -->
     <nav id="topNav">
         <div class="nav-left">
-            <button id="menuBtn" class="icon-btn" aria-label="Menu">☰</button>
+            <button id="menuBtn" class="icon-btn" aria-label="Menu">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
             <span class="app-title">Statsnap</span>
         </div>
         <div class="nav-center">
             <div class="mode-selector">
-                <button class="mode-btn active" data-mode="design">✏️ Design</button>
-                <button class="mode-btn" data-mode="photo">🖼 Photo</button>
-                <button class="mode-btn" data-mode="collage">🎭 Collage</button>
+                <button class="mode-btn active" data-mode="design">
+                    <span class="mode-icon">✏️</span>
+                    <span class="mode-text">Design</span>
+                </button>
+                <button class="mode-btn" data-mode="photo">
+                    <span class="mode-icon">🖼</span>
+                    <span class="mode-text">Photo</span>
+                </button>
+                <button class="mode-btn" data-mode="collage">
+                    <span class="mode-icon">🎭</span>
+                    <span class="mode-text">Collage</span>
+                </button>
             </div>
         </div>
         <div class="nav-right">
-            <button id="undoBtn" class="icon-btn" aria-label="Undo" disabled>↩️</button>
-            <button id="redoBtn" class="icon-btn" aria-label="Redo" disabled>↪️</button>
+            <button id="undoBtn" class="icon-btn" aria-label="Undo" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+            </button>
+            <button id="redoBtn" class="icon-btn" aria-label="Redo" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path>
+                </svg>
+            </button>
             <button id="themeToggle" class="icon-btn" aria-label="Toggle theme">🌓</button>
         </div>
     </nav>
 
+    <!-- Hamburger Menu -->
+    <div id="hamburgerMenu" class="hamburger-menu" style="display:none;">
+        <div class="menu-section">
+            <div class="menu-section-title">Project</div>
+            <button class="menu-item" data-action="newProject">📄 New Project</button>
+            <button class="menu-item" data-action="saveProject">💾 Save Project</button>
+            <button class="menu-item" data-action="exportImage">📤 Export as Image</button>
+            <button class="menu-item" data-action="exportPNG">🖼 Export as PNG</button>
+        </div>
+        <div class="menu-section">
+            <div class="menu-section-title">View</div>
+            <button class="menu-item" data-action="resetZoom">🔍 Reset Zoom</button>
+            <button class="menu-item" data-action="fitToScreen">📐 Fit to Screen</button>
+        </div>
+        <div class="menu-section">
+            <div class="menu-section-title">Canvas</div>
+            <button class="menu-item" data-action="canvasSize">📏 Canvas Size</button>
+            <button class="menu-item" data-action="clearCanvas">🗑 Clear Canvas</button>
+        </div>
+        <div class="menu-section">
+            <div class="menu-section-title">Help</div>
+            <button class="menu-item" data-action="openDocs">📚 Documentation</button>
+            <button class="menu-item" data-action="keyboardShortcuts">⌨️ Shortcuts</button>
+        </div>
+    </div>
+
     <!-- Canvas Area -->
     <div id="canvasContainer">
-        <div id="mainCanvas" class="canvas">
-            <!-- Layers will be dynamically created here -->
+        <div id="canvasWrapper">
+            <div id="mainCanvas" class="canvas">
+                <!-- Layers dynamically created -->
+            </div>
         </div>
         <div id="canvasOverlay" class="canvas-overlay">
-            <p id="emptyState">Tap + to add content</p>
+            <p id="emptyState">Tap a tool below to start creating</p>
         </div>
-        <!-- Brush canvas overlay for paint/blur brushes -->
-        <canvas id="brushCanvas" style="display:none; position:absolute; top:0; left:0; pointer-events:none;"></canvas>
+        <!-- Brush overlay -->
+        <canvas id="brushOverlay" style="display:none;"></canvas>
     </div>
 
-    <!-- Bottom Toolbar Container -->
-    <div id="bottomToolbarContainer">
-        <!-- Context-Aware Toolbar -->
-        <div id="contextToolbar" class="toolbar">
-            <!-- Default tools - Add content -->
-            <div id="defaultTools" class="tool-group active">
-                <button class="tool-btn" data-action="addText">
-                    <span class="tool-icon">T</span>
-                    <span class="tool-label">Text</span>
-                </button>
-                <button class="tool-btn" data-action="addImage">
-                    <span class="tool-icon">🖼</span>
-                    <span class="tool-label">Image</span>
-                </button>
-                <button class="tool-btn" data-action="addShape">
-                    <span class="tool-icon">⬜</span>
-                    <span class="tool-label">Shape</span>
-                </button>
-                <button class="tool-btn" data-action="changeBackground">
-                    <span class="tool-icon">🎨</span>
-                    <span class="tool-label">BG</span>
-                </button>
-                <button class="tool-btn" data-action="exportImage">
-                    <span class="tool-icon">📤</span>
-                    <span class="tool-label">Export</span>
-                </button>
-            </div>
+    <!-- Bottom Toolbar -->
+    <div id="bottomToolbar">
+        <!-- Design Mode Tools -->
+        <div id="designTools" class="tool-group active">
+            <button class="tool-btn" data-action="addText">
+                <span class="tool-icon">T</span>
+                <span class="tool-label">Text</span>
+            </button>
+            <button class="tool-btn" data-action="addImage">
+                <span class="tool-icon">🖼</span>
+                <span class="tool-label">Image</span>
+            </button>
+            <button class="tool-btn" data-action="addShape">
+                <span class="tool-icon">⬜</span>
+                <span class="tool-label">Shape</span>
+            </button>
+            <button class="tool-btn" data-action="addSticker">
+                <span class="tool-icon">⭐</span>
+                <span class="tool-label">Sticker</span>
+            </button>
+            <button class="tool-btn" data-action="changeBackground">
+                <span class="tool-icon">🎨</span>
+                <span class="tool-label">BG</span>
+            </button>
+            <button class="tool-btn" data-action="layerPanel">
+                <span class="tool-icon">📑</span>
+                <span class="tool-label">Layers</span>
+            </button>
+        </div>
 
-            <!-- Text editing tools -->
-            <div id="textTools" class="tool-group">
-                <button class="tool-btn" data-action="textColor">
-                    <span class="tool-icon">🌈</span>
-                    <span class="tool-label">Color</span>
-                </button>
-                <button class="tool-btn" data-action="textBold">
-                    <span class="tool-icon">𝐁</span>
-                    <span class="tool-label">Bold</span>
-                </button>
-                <button class="tool-btn" data-action="textAlign">
-                    <span class="tool-icon">≡</span>
-                    <span class="tool-label">Align</span>
-                </button>
-                <button class="tool-btn" data-action="dropShadow">
-                    <span class="tool-icon">◈</span>
-                    <span class="tool-label">Shadow</span>
-                </button>
-                <button class="tool-btn" data-action="deleteLayer">
-                    <span class="tool-icon">🗑</span>
-                    <span class="tool-label">Delete</span>
-                </button>
-            </div>
+        <!-- Photo Mode Tools -->
+        <div id="photoTools" class="tool-group">
+            <button class="tool-btn" data-action="addImage">
+                <span class="tool-icon">📷</span>
+                <span class="tool-label">Add Photo</span>
+            </button>
+            <button class="tool-btn" data-action="imageAdjust">
+                <span class="tool-icon">⚙️</span>
+                <span class="tool-label">Adjust</span>
+            </button>
+            <button class="tool-btn" data-action="imageFilter">
+                <span class="tool-icon">✨</span>
+                <span class="tool-label">Filters</span>
+            </button>
+            <button class="tool-btn" data-action="cropImage">
+                <span class="tool-icon">✂️</span>
+                <span class="tool-label">Crop</span>
+            </button>
+            <button class="tool-btn" data-action="paintBrush">
+                <span class="tool-icon">🖌</span>
+                <span class="tool-label">Paint</span>
+            </button>
+            <button class="tool-btn" data-action="blurBrush">
+                <span class="tool-icon">💧</span>
+                <span class="tool-label">Blur</span>
+            </button>
+        </div>
 
-            <!-- Image editing tools -->
-            <div id="imageTools" class="tool-group">
-                <button class="tool-btn" data-action="imageAdjust">
-                    <span class="tool-icon">⚙️</span>
-                    <span class="tool-label">Adjust</span>
-                </button>
-                <button class="tool-btn" data-action="imageFilter">
-                    <span class="tool-icon">✨</span>
-                    <span class="tool-label">Filter</span>
-                </button>
-                <button class="tool-btn" data-action="paintBrush">
-                    <span class="tool-icon">🖌</span>
-                    <span class="tool-label">Paint</span>
-                </button>
-                <button class="tool-btn" data-action="blurBrush">
-                    <span class="tool-icon">💧</span>
-                    <span class="tool-label">Blur</span>
-                </button>
-                <button class="tool-btn" data-action="deleteLayer">
-                    <span class="tool-icon">🗑</span>
-                    <span class="tool-label">Delete</span>
-                </button>
-            </div>
+        <!-- Collage Mode Tools -->
+        <div id="collageTools" class="tool-group">
+            <button class="tool-btn" data-action="collageGrid2">
+                <span class="tool-icon">⊞</span>
+                <span class="tool-label">2 Grid</span>
+            </button>
+            <button class="tool-btn" data-action="collageGrid3">
+                <span class="tool-icon">⊟</span>
+                <span class="tool-label">3 Grid</span>
+            </button>
+            <button class="tool-btn" data-action="collageGrid4">
+                <span class="tool-icon">⊠</span>
+                <span class="tool-label">4 Grid</span>
+            </button>
+            <button class="tool-btn" data-action="collageFree">
+                <span class="tool-icon">🆓</span>
+                <span class="tool-label">Free</span>
+            </button>
+            <button class="tool-btn" data-action="changeBackground">
+                <span class="tool-icon">🎨</span>
+                <span class="tool-label">BG</span>
+            </button>
+        </div>
 
-            <!-- Shape editing tools -->
-            <div id="shapeTools" class="tool-group">
-                <button class="tool-btn" data-action="shapeColor">
-                    <span class="tool-icon">🎨</span>
-                    <span class="tool-label">Fill</span>
-                </button>
-                <button class="tool-btn" data-action="shapeBorder">
-                    <span class="tool-icon">⬚</span>
-                    <span class="tool-label">Border</span>
-                </button>
-                <button class="tool-btn" data-action="dropShadow">
-                    <span class="tool-icon">◈</span>
-                    <span class="tool-label">Shadow</span>
-                </button>
-                <button class="tool-btn" data-action="deleteLayer">
-                    <span class="tool-icon">🗑</span>
-                    <span class="tool-label">Delete</span>
-                </button>
-            </div>
+        <!-- Layer-specific tools (shown when layer selected) -->
+        <div id="layerTools" class="tool-group">
+            <button class="tool-btn" data-action="layerLock">
+                <span class="tool-icon">🔒</span>
+                <span class="tool-label">Lock</span>
+            </button>
+            <button class="tool-btn" data-action="layerDuplicate">
+                <span class="tool-icon">📋</span>
+                <span class="tool-label">Dup</span>
+            </button>
+            <button class="tool-btn" data-action="layerOpacity">
+                <span class="tool-icon">👁</span>
+                <span class="tool-label">Opacity</span>
+            </button>
+            <button class="tool-btn" data-action="layerBlend">
+                <span class="tool-icon">🔀</span>
+                <span class="tool-label">Blend</span>
+            </button>
+            <button class="tool-btn" data-action="bringToFront">
+                <span class="tool-icon">⬆</span>
+                <span class="tool-label">Front</span>
+            </button>
+            <button class="tool-btn" data-action="sendToBack">
+                <span class="tool-icon">⬇</span>
+                <span class="tool-label">Back</span>
+            </button>
         </div>
     </div>
 
-    <!-- Slide-up Panel for extended controls -->
-    <div id="slidePanel" class="slide-panel">
+    <!-- Settings Panel -->
+    <div id="settingsPanel" class="settings-panel">
         <div class="panel-header">
             <span id="panelTitle">Settings</span>
-            <button id="closePanel" class="icon-btn">✕</button>
+            <button id="closePanelBtn" class="icon-btn">✕</button>
         </div>
         <div id="panelContent" class="panel-content"></div>
     </div>
 
-    <!-- Modal Container -->
-    <div id="modalContainer"></div>
+    <!-- Canvas Size Modal -->
+    <div id="canvasSizeModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3>Canvas Size</h3>
+            <div class="preset-sizes">
+                <button class="preset-btn" data-w="1080" data-h="1920">9:16 Story</button>
+                <button class="preset-btn" data-w="1080" data-h="1080">1:1 Post</button>
+                <button class="preset-btn" data-w="1080" data-h="1350">4:5 Post</button>
+                <button class="preset-btn" data-w="1920" data-h="1080">16:9 Wide</button>
+                <button class="preset-btn" data-w="800" data-h="800">1:1 Small</button>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+                <input type="number" id="customWidth" placeholder="Width" min="200" max="4000" value="1080">
+                <span>×</span>
+                <input type="number" id="customHeight" placeholder="Height" min="200" max="4000" value="1920">
+            </div>
+            <button id="applyCanvasSize" class="primary-btn" style="width:100%;margin-top:15px;">Apply</button>
+            <button id="closeCanvasSize" class="secondary-btn" style="width:100%;margin-top:5px;">Cancel</button>
+        </div>
+    </div>
 
     <!-- Color Picker Popup -->
-    <div id="colorPickerPopup" class="color-picker-popup" style="display:none;">
-        <div class="color-grid" id="colorGrid"></div>
-        <input type="color" id="customColorInput" value="#000000">
+    <div id="colorPopup" class="color-popup" style="display:none;">
+        <div class="color-grid" id="popupColorGrid"></div>
+        <input type="color" id="popupColorInput" value="#000000">
     </div>
 
     <script src="script.js"></script>
 </body>
-                                                 </html>
+                        </html>
